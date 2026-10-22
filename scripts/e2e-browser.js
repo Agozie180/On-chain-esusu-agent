@@ -1,0 +1,144 @@
+// Real-browser end-to-end test: drives web/ in headless Chromium against a local Hardhat node.
+// A tiny EIP-1193 shim forwards wallet calls to the node (its accounts are unlocked), so every click is a real transaction.
+//   SOLC_JS=1 node scripts/e2e-browser.js
+const { chromium } = require("playwright-core");
+const { spawn } = require("child_process");
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const { ethers } = require("ethers");
+
+const RPC = "http://127.0.0.1:8545";
+const PORT = 5173;
+const WEB = path.join(__dirname, "..", "web");
+const ETHERS = path.join(__dirname, "..", "node_modules", "ethers", "dist", "ethers.umd.min.js");
+const types = { ".html": "text/html", ".js": "text/javascript" };
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let failures = 0;
+const check = (name, ok, extra = "") => { console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok ? "" : "  " + extra}`); if (!ok) failures++; };
+
+async function waitRpc() {
+  for (let i = 0; i < 60; i++) { try { const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }) }); if (r.ok) return; } catch {} await sleep(500); }
+  throw new Error("hardhat node did not start");
+}
+
+(async () => {
+  const node = spawn("npx", ["hardhat", "node", "--port", "8545"], { env: { ...process.env, SOLC_JS: "1" }, stdio: "ignore" });
+  const srv = http.createServer((req, res) => {
+    const f = path.join(WEB, req.url.split("?")[0] === "/" ? "index.html" : req.url.split("?")[0]);
+    if (!f.startsWith(WEB) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { "content-type": types[path.extname(f)] || "text/plain" }); res.end(fs.readFileSync(f));
+  }).listen(PORT);
+  let browser;
+  try {
+    await waitRpc();
+    const provider = new ethers.JsonRpcProvider(RPC);
+    const accts = await provider.send("eth_accounts", []);
+    const bob = await provider.getSigner(accts[2]);
+    const me = accts[1];
+
+    browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+    const page = await browser.newPage();
+    const pageErrors = [];
+    page.on("pageerror", (e) => pageErrors.push(e.message));
+    await page.route("**/ethers.umd.min.js", (r) => r.fulfill({ contentType: "text/javascript", body: fs.readFileSync(ETHERS) }));
+    await page.exposeFunction("__rpc", async (method, params) => {
+      if (method === "eth_requestAccounts" || method === "eth_accounts") return [me];
+      const r = await (await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }) })).json();
+      if (r.error) { const e = new Error(r.error.message); e.code = r.error.code; e.data = r.error.data; throw e; }
+      return r.result;
+    });
+    await page.addInitScript(() => { window.ethereum = { request: ({ method, params }) => window.__rpc(method, params || []), on() {} }; });
+    await page.goto(`http://127.0.0.1:${PORT}/`);
+
+    const logText = () => page.locator("#log").innerText();
+    const waitLog = async (needle, ms = 30000) => { const t = Date.now(); while (Date.now() - t < ms) { if ((await logText()).includes(needle)) return true; await sleep(300); } return false; };
+    const click = (sel) => page.locator(sel).click();
+
+    await click("#btnConnect"); check("wallet connects", await waitLog("Connected"));
+
+    await click("#btnDeployReg"); check("registry deploys from the UI", await waitLog("Deploy registry ✔") && /^0x/.test(await page.inputValue("#regAddr")));
+    await page.waitForSelector("#discover", { state: "visible" });
+    check("registry panel shows reputation 0 / 1000", (await page.locator("#regKv").innerText()).includes("0 / 1000"));
+
+    await page.locator("#discover summary").click();
+    await page.fill("#cDues", "1"); await page.fill("#cSize", "2"); await page.fill("#cMinutes", "15");
+    await click("#btnCreate"); check("circle is created from the UI", await waitLog("Create circle ✔"));
+    await page.waitForSelector("#circleList button[data-open]");
+    check("circle shows up in discovery", (await page.locator("#circleList").innerText()).includes("0/2 joined"));
+    await click("#circleList button[data-open]");
+    await page.waitForSelector("#circleCard", { state: "visible" });
+
+    check("join is disabled until a slot is selected", await page.locator("#btnJoin").isDisabled());
+    await page.locator(".slot.free").first().click();
+    await page.waitForFunction(() => document.querySelector("#risk").innerText.includes("Risk grade"), null, { timeout: 15000 }).catch(() => {});
+    check("risk grade appears for the selected slot", (await page.locator("#risk").innerText()).includes("Risk grade"), await page.locator("#risk").innerText());
+    await click("#btnJoin"); check("join succeeds", await waitLog("Join slot 1 ✔"));
+    check("my slot is shown as mine", (await page.locator("#slots").innerText()).toLowerCase().includes("you"));
+
+    const circleAddr = await page.evaluate(() => localStorage.getItem("esusu.circle"));
+    const circle = new ethers.Contract(circleAddr, ["function join(uint256) payable", "function contribute() payable", "function collateralFor(uint256) view returns (uint256)", "function state() view returns (uint8)", "function dues() view returns (uint256)", "function paid(uint256,address) view returns (bool)"], bob);
+    await (await circle.join(1, { value: await circle.collateralFor(1) })).wait();
+    await page.evaluate(() => document.querySelector("#btnLoadReg").click()); await sleep(1500);
+    await click("#circleList button[data-open]"); await sleep(1500);
+    check("circle is Active once full", (await page.locator("#circleKv").innerText()).includes("Active"));
+
+    await click("#btnPay"); check("pay dues succeeds", await waitLog("Pay dues ✔"));
+    await (await circle.contribute({ value: await circle.dues() })).wait();
+    await click("#btnSettle"); check("settle succeeds", await waitLog("Settle round ✔"));
+    await sleep(1200);
+    // the dapp deploys the registry with the connected wallet as treasury, so payout (1.99) + fee (0.01) both land with it
+    check("withdrawable shows the 2 POT pot (1.99 payout + 0.01 fee, same wallet is treasury)", /My withdrawable\s*2 POT/.test((await page.locator("#circleKv").innerText()).replace(/\n/g, " ")), await page.locator("#circleKv").innerText());
+    await click("#btnWithdraw"); check("withdraw succeeds", await waitLog("Withdraw ✔"));
+
+    // vault: deploy, fund, policy, allowlist, kill switch
+    await click("#btnDeployVault"); check("vault deploys from the UI", await waitLog("Deploy vault ✔"));
+    await page.waitForSelector("#vaultView", { state: "visible" });
+    await page.fill("#fundAmt", "5"); await click("#btnFund"); check("vault funds", await waitLog("Fund vault ✔"));
+    await page.fill("#pAgent", accts[5]); await page.fill("#pPerTx", "1"); await page.fill("#pPeriodCap", "3");
+    await click("#btnPolicy"); check("policy saves", await waitLog("Save policy ✔"));
+    await click("#btnAllow"); check("circle allowlisted", await waitLog("Allowlist circle ✔"));
+    await sleep(1000);
+    const vk = await page.locator("#vaultKv").innerText();
+    check("vault panel reflects balance, agent and allowlist", vk.includes("5 POT") && vk.includes("yes"), vk);
+    await click("#btnPause"); check("kill switch pauses the agent", await waitLog("Pause agent ✔"));
+    await sleep(1000);
+    check("vault panel shows PAUSED", (await page.locator("#vaultKv").innerText()).includes("PAUSED"));
+
+    // ---- ERC-20 (stable-value token) path: approve-then-join, approve-then-pay, mint helper, vault asset matching
+    const art = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "artifacts/contracts/test/MockToken.sol/MockToken.json"), "utf8"));
+    const tok = await new ethers.ContractFactory(art.abi, art.bytecode, bob).deploy(); await tok.waitForDeployment();
+    const tokAddr = await tok.getAddress();
+    await page.selectOption("#cAsset", "token"); await page.fill("#cToken", tokAddr);
+    await page.fill("#cDues", "10"); await page.fill("#cSize", "2");
+    if (!(await page.locator("#cDues").isVisible())) await page.locator("#discover summary").click();
+    await click("#btnCreate"); check("ERC-20 circle is created from the UI", await waitLog("Create circle ✔"));
+    await sleep(1500);
+    await page.locator("#circleList button[data-open]").first().click();
+    await page.waitForFunction(() => document.querySelector("#circleKv").innerText.includes("mUSD"), null, { timeout: 15000 }).catch(() => {});
+    check("circle view uses the token symbol and decimals", (await page.locator("#circleKv").innerText()).includes("10 mUSD"), await page.locator("#circleKv").innerText());
+    check("mint helper is offered for tokens", await page.locator("#btnMint").isVisible());
+    await click("#btnMint"); check("mint test tokens", await waitLog("Mint test tokens ✔"));
+    await page.locator(".slot.free").first().click();
+    await sleep(1000);
+    await click("#btnJoin"); check("ERC-20 join (approve then join) succeeds", await waitLog("Join slot 1 ✔"));
+    const circle2 = new ethers.Contract((await page.evaluate(() => localStorage.getItem("esusu.circle"))), ["function join(uint256)", "function contribute()", "function collateralFor(uint256) view returns (uint256)", "function dues() view returns (uint256)", "function state() view returns (uint8)"], bob);
+    await (await tok.mint(accts[2], 1_000_000_000n)).wait();
+    await (await tok.approve(await circle2.getAddress(), await circle2.collateralFor(1))).wait();
+    await (await circle2.join(1)).wait();
+    check("ERC-20 circle becomes Active", Number(await circle2.state()) === 1);
+    await click("#btnPay"); check("ERC-20 pay dues (approve then contribute) succeeds", await waitLog("Pay dues ✔"));
+    await click("#btnDeployVault"); check("ERC-20 vault deploys for the circle's asset", await waitLog("Deploy vault ✔"));
+    await sleep(1200);
+    check("agent activity panel loads without an RPC error", !(await page.locator("#activity").innerText()).includes("unavailable"), await page.locator("#activity").innerText());
+
+    const errs = (await logText()).split("\n").filter((l) => l.includes("✖"));
+    check("no failed actions in the log", errs.length === 0, errs.join(" | "));
+    check("no uncaught page errors", pageErrors.length === 0, pageErrors.join(" | "));
+    await page.screenshot({ path: path.join(__dirname, "..", "docs", "dapp-e2e.png"), fullPage: true });
+  } catch (e) { console.error("E2E crashed:", e.message); failures++; }
+  finally { if (browser) await browser.close(); srv.close(); node.kill(); }
+  console.log(failures ? `\n${failures} check(s) FAILED` : "\nAll browser checks passed");
+  process.exit(failures ? 1 : 0);
+})();
