@@ -13,7 +13,11 @@
     "test:fuzz": "hardhat test test/fuzz.test.js",
     "demo": "hardhat run scripts/demo.js",
     "e2e": "node scripts/e2e-browser.js",
-    "risk": "node agent/risk.js"
+    "risk": "node agent/risk.js",
+    "wallet": "node scripts/wallet.js",
+    "wallet:show": "node scripts/wallet.js --show",
+    "preflight": "node scripts/preflight.js",
+    "flatten": "node scripts/flatten.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
