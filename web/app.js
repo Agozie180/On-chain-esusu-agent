@@ -1,7 +1,7 @@
 /* On-chain Esusu-agent dapp v2. No build step. Needs an EVM wallet (e.g. MetaMask). */
 (() => {
-  const CHAIN = { chainId: "0x" + (420420777).toString(16), chainName: "Portaldot V3 Testnet",
-    nativeCurrency: { name: "POT", symbol: "POT", decimals: 18 }, rpcUrls: ["https://test-evm-rpc-v3.portaldot.dev"],
+  const CHAIN = { chainId: "0x" + (420420777).toString(16), chainName: "PortaldotV3 Testnet",
+    nativeCurrency: { name: "tPOTv3", symbol: "tPOTv3", decimals: 18 }, rpcUrls: ["https://test-evm-rpc-v3.portaldot.dev"],
     blockExplorerUrls: ["https://node-console.portaldot.dev/"] };
   const STATES = ["Open (filling)", "Active", "Completed"];
   const ZERO = ethers.ZeroAddress;
@@ -11,7 +11,7 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   let provider, signer, me, reg, circle, vault, token;
-  let asset = { native: true, symbol: "POT", decimals: 18 };
+  let asset = { native: true, symbol: "tPOTv3", decimals: 18 };
   let selectedSlot = null;
 
   const fmt = (w) => { const s = ethers.formatUnits(w, asset.decimals); return (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s) + " " + asset.symbol; };
@@ -61,7 +61,7 @@
     for (const a of [...addrs].reverse()) {
       const c = new ethers.Contract(a, ESUSU.circle.abi, provider);
       const [st, size, filled, dues, tk, minScore] = await Promise.all([c.state(), c.size(), c.filled(), c.dues(), c.token(), c.minScore()]);
-      const sym = tk === ZERO ? "POT" : await tokenSymbol(tk);
+      const sym = tk === ZERO ? "tPOTv3" : await tokenSymbol(tk);
       const dec = tk === ZERO ? 18 : await tokenDecimals(tk);
       rows.push(`<li><span>${short(a)} · ${ethers.formatUnits(dues, dec).replace(/\.0$/, "")} ${esc(sym)} × ${size} · ${filled}/${size} joined${minScore > 0n ? " · min score " + minScore : ""}</span>
         <span><span class="tag ${Number(st) === 0 ? "wait" : Number(st) === 1 ? "ok" : ""}">${STATES[Number(st)]}</span> <button data-open="${a}">Open</button></span></li>`);
@@ -79,7 +79,7 @@
     circle = new ethers.Contract(addr, ESUSU.circle.abi, signer);
     store.set("esusu.circle", addr); selectedSlot = null;
     const tk = await circle.token();
-    if (tk === ZERO) { asset = { native: true, symbol: "POT", decimals: 18 }; token = null; }
+    if (tk === ZERO) { asset = { native: true, symbol: "tPOTv3", decimals: 18 }; token = null; }
     else { token = new ethers.Contract(tk, ESUSU.erc20, signer); asset = { native: false, symbol: await tokenSymbol(tk), decimals: await tokenDecimals(tk) }; }
     vault = null; $("vaultView").style.display = "none";
     const saved = store.get("esusu.vault." + tk);

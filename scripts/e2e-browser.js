@@ -89,7 +89,7 @@ async function waitRpc() {
     await click("#btnSettle"); check("settle succeeds", await waitLog("Settle round ✔"));
     await sleep(1200);
     // the dapp deploys the registry with the connected wallet as treasury, so payout (1.99) + fee (0.01) both land with it
-    check("withdrawable shows the 2 POT pot (1.99 payout + 0.01 fee, same wallet is treasury)", /My withdrawable\s*2 POT/.test((await page.locator("#circleKv").innerText()).replace(/\n/g, " ")), await page.locator("#circleKv").innerText());
+    check("withdrawable shows the 2 tPOTv3 pot (1.99 payout + 0.01 fee, same wallet is treasury)", /My withdrawable\s*2 tPOTv3/.test((await page.locator("#circleKv").innerText()).replace(/\n/g, " ")), await page.locator("#circleKv").innerText());
     await click("#btnWithdraw"); check("withdraw succeeds", await waitLog("Withdraw ✔"));
 
     // vault: deploy, fund, policy, allowlist, kill switch
@@ -101,7 +101,7 @@ async function waitRpc() {
     await click("#btnAllow"); check("circle allowlisted", await waitLog("Allowlist circle ✔"));
     await sleep(1000);
     const vk = await page.locator("#vaultKv").innerText();
-    check("vault panel reflects balance, agent and allowlist", vk.includes("5 POT") && vk.includes("yes"), vk);
+    check("vault panel reflects balance, agent and allowlist", vk.includes("5 tPOTv3") && vk.includes("yes"), vk);
     await click("#btnPause"); check("kill switch pauses the agent", await waitLog("Pause agent ✔"));
     await sleep(1000);
     check("vault panel shows PAUSED", (await page.locator("#vaultKv").innerText()).includes("PAUSED"));
