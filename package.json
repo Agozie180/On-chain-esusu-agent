@@ -1,0 +1,29 @@
+{
+  "name": "onchain-esusu-agent",
+  "version": "0.1.0",
+  "description": "On-chain Esusu-agent: rotating savings circles on Portaldot with a policy-bounded AI agent that pays your dues.",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network portaldot",
+    "agent": "node agent/agent.js",
+    "build:web": "node scripts/build-web.js",
+    "web": "node scripts/build-web.js && npx --yes http-server web -p 5173 -c-1",
+    "test:fuzz": "hardhat test test/fuzz.test.js",
+    "demo": "hardhat run scripts/demo.js",
+    "e2e": "node scripts/e2e-browser.js",
+    "risk": "node agent/risk.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^18.0.8",
+    "hardhat": "^2.29.1",
+    "playwright-core": "^1.64.1",
+    "solc": "^0.8.24"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
+    "ethers": "^6.17.0"
+  }
+}
