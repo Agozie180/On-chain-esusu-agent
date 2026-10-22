@@ -13,6 +13,11 @@ Updated: 2026-10-22 evening (v2). Keep this current so work can resume in a new 
 - **Check-in: Oct 24 12:00** (public repo, README, architecture diagram, contract address + tx hash, demo video <= 3 min or live link)
 - Office hour application: Oct 27 12:00 · Final submission / code freeze: Nov 6 04:00
 
+## Deploy tooling (added)
+- `docs/DEPLOY.md`: wallet, faucet, deploy guide. `npm run wallet | wallet:show | preflight | deploy:testnet | flatten`.
+- 0x to 5... mapping is computed in `lib/portaldot.js` and matches the official guide's example. Faucet needs the **5...** address.
+- The build sandbox cannot reach Portaldot (403), so nothing has been deployed yet. Keys must be created on the user's machine.
+
 ## Next steps, in order
 1. Create public repo `Agozie180/On-chain-Esusu-agent`, push (author Agozie180 only, no co-author trailers).
 2. Get test POT (native address starting with 5; Discord ticket or DM admin).

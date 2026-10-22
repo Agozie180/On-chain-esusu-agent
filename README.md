@@ -65,13 +65,15 @@ node agent/risk.js <circleAddress> [slot]  # pre-join risk grade for a circle
 ```
 
 ## Deploy to Portaldot testnet
+Full guide (wallet creation, claiming test POT, Hardhat and Remix routes, troubleshooting): **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 ```bash
-cp .env.example .env      # PRIVATE_KEY (owner), AGENT_ADDRESS (agent EVM address)
-npx hardhat run scripts/deploy.js --network portaldot
-# fill AGENT_PRIVATE_KEY, VAULT, OWNER, CIRCUITS (from deployments/portaldot.json), then:
+npm run wallet        # creates owner + agent keys locally, prints the 0x and the native 5... addresses
+# request test POT for the 5... address (docs/DEPLOY.md step 3), then:
+npm run preflight     # RPC, chain id, balance
+npm run deploy:testnet
 npm run agent
 ```
-RPC `https://test-evm-rpc-v3.portaldot.dev`, chain ID `420420777`. Test POT: Portaldot Discord (native address starting with 5).
+RPC `https://test-evm-rpc-v3.portaldot.dev`, chain ID `420420777`, symbol `tPOTv3`.
 
 ## Business model
 0.5% protocol fee on payouts (hard cap 2%, set per registry, paid to a treasury), charged only when a circle completes a payout. Reputation reads are free, which is the ecosystem hook: lenders and other dapps can gate on `scoreOf`.
