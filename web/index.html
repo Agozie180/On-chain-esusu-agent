@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>On-chain Esusu-agent</title>
+<style>
+  :root { --bg:#faf8f3; --card:#fff; --ink:#1d2a24; --mute:#66736c; --line:#e3ded2; --green:#1f6b4a; --green2:#e4f1ea; --red:#b3402f; --red2:#f9e6e2; --amber:#8a6100; --amber2:#fbf0d2; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141a17; --card:#1c2420; --ink:#eaf0ec; --mute:#93a39a; --line:#2b3730; --green:#5fcf9b; --green2:#1b3328; --red:#ff8d7b; --red2:#3a2320; --amber:#f0c25a; --amber2:#372d12; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:920px; margin:0 auto; padding:16px; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:8px 0 16px; }
+  h1 { font-size:22px; margin:0; letter-spacing:-.01em; } h1 span { color:var(--green); }
+  h2 { font-size:17px; margin:0 0 4px; } p.sub { margin:0 0 12px; color:var(--mute); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:0 0 16px; }
+  .thesis { background:var(--green2); border-color:transparent; font-size:15px; }
+  label { display:block; font-size:13px; color:var(--mute); margin:8px 0 2px; }
+  input, select { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px; background:var(--bg); color:var(--ink); font:inherit; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  button { font:inherit; padding:9px 14px; border-radius:9px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--green); border-color:var(--green); color:#fff; } @media (prefers-color-scheme: dark){ button.primary{ color:#0c1612; } }
+  button.danger { background:var(--red2); color:var(--red); border-color:transparent; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; align-items:end; } .row > .grow { flex:1 1 200px; }
+  .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin:8px 0; }
+  .kv div { background:var(--bg); border-radius:10px; padding:8px 10px; } .kv b { display:block; font-size:12px; color:var(--mute); font-weight:500; } .kv span { font-size:16px; word-break:break-all; }
+  .list { list-style:none; padding:0; margin:8px 0 0; } .list li { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--line); font-size:14px; word-break:break-all; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:20px; white-space:nowrap; } .ok { background:var(--green2); color:var(--green); } .bad { background:var(--red2); color:var(--red); } .wait { background:var(--amber2); color:var(--amber); }
+  .slots { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-top:8px; }
+  .slot { border:1px solid var(--line); border-radius:10px; padding:8px; font-size:13px; background:var(--bg); } .slot.free { cursor:pointer; border-color:var(--green); } .slot.sel { background:var(--green2); }
+  #log { font:12.5px/1.5 ui-monospace,Menlo,monospace; max-height:220px; overflow:auto; background:var(--bg); border-radius:10px; padding:10px; white-space:pre-wrap; word-break:break-all; }
+  .small { font-size:13px; color:var(--mute); } a { color:var(--green); } .risk { margin-top:8px; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>On-chain <span>Esusu-agent</span></h1>
+    <div class="row" style="margin:0"><button id="btnNet">Add / switch to Portaldot testnet</button><button id="btnConnect" class="primary">Connect wallet</button></div>
+  </header>
+
+  <div class="card thesis"><b>The agent can pay your dues. It can never pay itself, choose the amount, or send money anywhere you have not allowlisted.</b>
+    <div class="small" style="margin-top:4px">Circle rules and your reputation live on-chain. A paid-out member can never leave the circle in debt.</div></div>
+
+  <div class="card">
+    <h2>Registry</h2>
+    <p class="sub">The registry creates circles and records everyone's reputation. Paste its address (from the deployment) or deploy a fresh one.</p>
+    <div class="row">
+      <div class="grow"><label>Registry address</label><input id="regAddr" placeholder="0x..."></div>
+      <button id="btnLoadReg">Load</button><button id="btnDeployReg">Deploy registry</button>
+    </div>
+    <div class="kv" id="regKv" style="display:none"></div>
+  </div>
+
+  <div class="card" id="discover" style="display:none">
+    <h2>Circles</h2>
+    <p class="sub">Open and active circles from this registry.</p>
+    <ul class="list" id="circleList"></ul>
+    <details style="margin-top:12px"><summary>Create a new circle</summary>
+      <div class="grid">
+        <div><label>Asset</label><select id="cAsset"><option value="native">Native POT</option><option value="token">ERC-20 token</option></select></div>
+        <div><label>Token address (ERC-20 only)</label><input id="cToken" placeholder="0x..."></div>
+        <div><label>Dues per round (in whole units)</label><input id="cDues" value="10"></div>
+        <div><label>Members (2-50)</label><input id="cSize" value="3"></div>
+        <div><label>Round length (minutes)</label><input id="cMinutes" value="15"></div>
+        <div><label>Min reputation score to join</label><input id="cMin" value="0"></div>
+      </div>
+      <div class="row"><button id="btnCreate" class="primary">Create circle</button></div>
+    </details>
+  </div>
+
+  <div class="card" id="circleCard" style="display:none">
+    <h2>Circle <span class="small" id="circleTitle"></span></h2>
+    <div class="kv" id="circleKv"></div>
+    <div class="risk" id="risk"></div>
+    <p class="small" style="margin-top:12px">Payout slots. Early slots are paid sooner and lock more collateral.</p>
+    <div class="slots" id="slots"></div>
+    <div class="row">
+      <button id="btnJoin" class="primary">Join selected slot</button>
+      <button id="btnLeave">Leave (before start)</button>
+      <button id="btnPay" class="primary">Pay my dues</button>
+      <button id="btnSettle">Settle round</button>
+      <button id="btnWithdraw">Withdraw my balance</button>
+      <button id="btnMint" style="display:none">Mint test tokens</button>
+    </div>
+    <ul class="list" id="members"></ul>
+  </div>
+
+  <div class="card" id="vaultCard" style="display:none">
+    <h2>My agent allowance</h2>
+    <p class="sub">A vault only you can withdraw from, for this circle's asset. The agent key can call one function: pay your dues into circles you allowlist.</p>
+    <div class="row">
+      <div class="grow"><label>Vault address</label><input id="vaultAddr" placeholder="0x..."></div>
+      <button id="btnLoadVault">Load</button><button id="btnDeployVault">Deploy my vault</button>
+    </div>
+    <div id="vaultView" style="display:none">
+      <div class="kv" id="vaultKv"></div>
+      <div class="row">
+        <div class="grow"><label>Fund vault</label><input id="fundAmt" value="50"></div><button id="btnFund">Fund</button>
+        <div class="grow"><label>Withdraw to me</label><input id="wdAmt" value="10"></div><button id="btnVaultWd">Withdraw</button>
+      </div>
+      <h2 style="margin-top:16px">Policy</h2>
+      <div class="grid">
+        <div><label>Agent address</label><input id="pAgent" placeholder="0x... (agent hot key)"></div>
+        <div><label>Max per payment</label><input id="pPerTx" value="10"></div>
+        <div><label>Max per period</label><input id="pPeriodCap" value="30"></div>
+        <div><label>Period (hours)</label><input id="pHours" value="24"></div>
+        <div><label>Expires in (days)</label><input id="pDays" value="14"></div>
+      </div>
+      <div class="row">
+        <button id="btnPolicy" class="primary">Save policy</button><button id="btnAllow">Allowlist this circle</button><button id="btnDisallow">Remove this circle</button>
+        <button id="btnPause" class="danger">Kill switch: pause agent</button><button id="btnUnpause">Resume agent</button>
+      </div>
+      <h2 style="margin-top:16px">Agent activity</h2>
+      <div id="activity" class="small">No agent payments yet.</div>
+    </div>
+  </div>
+
+  <div class="card"><h2>Log</h2><div id="log"></div>
+    <p class="small">Run the agent with <code>npm run agent</code>. Unaudited hackathon code: use testnet funds only.</p></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="contracts.js"></script>
+<script src="risk.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
