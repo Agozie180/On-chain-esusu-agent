@@ -12,8 +12,16 @@ async function main() {
   const agentAddr = process.env.AGENT_ADDRESS;
   if (!agentAddr) throw new Error("Set AGENT_ADDRESS to the agent hot key's EVM address");
 
+  if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
+    const bal = await ethers.provider.getBalance(owner.address);
+    console.log(`deployer ${owner.address} balance ${ethers.formatEther(bal)} on ${hre.network.name}`);
+    if (bal === 0n) throw new Error("Deployer has no gas. Fund its native 5... address first (run: npm run wallet, then docs/DEPLOY.md step 3).");
+  }
   const out = { network: hre.network.name, chainId: Number((await ethers.provider.getNetwork()).chainId), owner: owner.address, agent: agentAddr, tx: {} };
-  const send = async (name, p) => { const r = await (await p).wait(); out.tx[name] = r.hash; return r; };
+  const send = async (name, p) => {
+    try { const tx = await p; const r = await tx.wait(); out.tx[name] = r.hash; console.log(`  ok ${name} ${r.hash}`); return r; }
+    catch (e) { e.step = name; throw e; }
+  };
 
   const Registry = await ethers.getContractFactory("EsusuRegistry");
   const reg = await Registry.deploy(owner.address, process.env.TREASURY || owner.address, Number(process.env.FEE_BPS ?? 50));
@@ -54,4 +62,11 @@ async function main() {
   fs.writeFileSync(`deployments/${hre.network.name}.json`, JSON.stringify(out, null, 2));
   console.log(JSON.stringify(out, null, 2));
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(`\nDeploy failed${e.step ? " at step '" + e.step + "'" : ""}: ${e.shortMessage || e.message}`);
+  const m = String(e.message || "");
+  if (/Invalid Transaction|invalid transaction/i.test(m)) console.error("Hint: the node rejected the signed transaction. Use the Remix + MetaMask route in docs/DEPLOY.md (npm run flatten).");
+  else if (/insufficient funds|gas required exceeds|exceeds block gas/i.test(m)) console.error("Hint: Portaldot's gas estimate may be inflated. Set GAS_LIMIT (e.g. 6000000) and GAS_PRICE_WEI in .env and retry; see docs/DEPLOY.md.");
+  else if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|403/i.test(m)) console.error("Hint: cannot reach the RPC from this network. Run: npm run preflight");
+  process.exit(1);
+});

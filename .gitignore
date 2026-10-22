@@ -4,3 +4,5 @@ cache/
 .env
 *.log
 .agent-state.json
+deployments/hardhat.json
+deployments/localhost.json
