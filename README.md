@@ -1,92 +1,102 @@
-# On-chain Esusu-agent: savings circles with portable reputation and an AI agent that can only pay your dues
+# On-chain Esusu-agent
 
-**Built for the Portaldot Hacker House 2026 (Track: Ecosystem DApps).**
+**Ajo, but nobody can run away with the pot. And an AI agent pays your dues without ever being able to steal.**
 
-**Links:** Live demo: _pending_ · Demo video: _pending_ · Pitch deck: _pending_ · Registry / contracts: _pending testnet deploy_ · Explorer: https://node-console.portaldot.dev/ · [Self-audit](docs/AUDIT.md) · [Architecture](ARCHITECTURE.md)
+[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-101%20contract%20%2B%2039%20browser-1f6b4a)
 
-> **The agent can pay your esusu dues. It can never pay itself, choose the amount, or send money anywhere you have not allowlisted. And a member who has been paid out can never leave the circle in debt.**
+Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: complete and tested on local chains; Portaldot testnet deployment in progress** (see [Status](#status-read-this-first)).
 
-Esusu (ajo, ROSCA) is how tens of millions of people in Nigeria save: everyone pays in each round and one member takes the pot, in turn. It runs on a WhatsApp group and trust, and it breaks when someone takes their payout and disappears. This project moves the rules on-chain and adds two things a WhatsApp group cannot do:
+| Try it | How |
+|---|---|
+| **Live app** | _link appears here after the first testnet deploy and Pages setup_ (see [docs/DEPLOY.md](docs/DEPLOY.md)) |
+| **60-second local demo, no wallet or tokens needed** | `npm install && npm run demo:local`, then open http://127.0.0.1:5173 ([judge guide](docs/JUDGES.md)) |
+| **Prove it works** | `npm test` (101 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
 
-1. **Debtor-safe circles.** Collateral is priced by payout slot: `dues x max(1, size-1-slot)`. Whoever is paid early locks more, exactly covering what they still owe. Missed rounds slash collateral into the pot; a defaulter forfeits their slot. Randomized simulations check this after every transaction.
-2. **A portable reputation score** (`EsusuRegistry.scoreOf`, 0-1000) written only by circles the registry deployed. Circles can require a minimum score, so a good saver carries credit between circles and other apps can read it.
-3. **An agent that cannot steal.** `AgentAllowance` is a vault the owner funds. The agent key can call exactly one function: pay the owner's dues into an owner-allowlisted circle, in the same asset, within per-payment and per-period caps, until it expires, unless paused. The amount comes from the circle, the beneficiary is always the owner.
+![The dapp after a full run in a real browser](docs/dapp-e2e.png)
+
+## Understand it in 10 seconds
+
+- **The problem.** Esusu / ajo circles (everyone pays in, one member takes the pot each round) are how many Nigerians save. They run on trust and a WhatsApp group, and they break when someone takes the pot and disappears. Digital versions can't rely on community shame once members are strangers ([e-MFP](https://www.e-mfp.eu/blog/when-fintech-meets-traditional-informal-financial-schemes-recent-trends-innovations-digitising)).
+- **The fix.** The circle's rules live on-chain. Whoever is paid early locks more collateral, so **a paid-out member can never leave the circle in debt**. A missed payment is covered by collateral, the member takes a strike, and a **portable reputation score** (usable by any app) updates.
+- **The twist.** Your **AI agent pays your dues on time** from a vault you fund. It can only pay circles and service providers **you** allowlisted, inside limits **you** set, and it can **never withdraw or pay itself**. You can kill it in one transaction.
+- **Why Portaldot.** Solidity contracts on Portaldot V3's EVM, with a native `5…` / `0x…` address toolkit and a Remix + Hardhat deploy path we built and documented for other teams.
+
+## Status (read this first)
+
+| Piece | State |
+|---|---|
+| 3 contracts (`EsusuCircle`, `EsusuRegistry`, `AgentAllowance`) | Built. 101 tests incl. 40 randomized full circles checking solvency after every transaction. Unaudited. |
+| Agent (decision core, auto-discovery, Telegram alerts, risk grader) | Built and tested against a real local chain. |
+| Paid API: agent buys a risk report over HTTP 402 from its capped vault | Built and tested end to end (local). |
+| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 39 checks pass in headless Chromium against a local chain. |
+| One-command judge demo with seeded circles, a defaulter, a gated circle and a live agent | Built and run end to end. |
+| **Portaldot testnet deployment** | **Not done yet.** Our build sandbox cannot reach Portaldot. Deploy kit, wallet tool and guide are ready: [docs/DEPLOY.md](docs/DEPLOY.md). No testnet addresses are claimed anywhere in this repo until they exist. |
+| Portaldot **WASM / ink!** | **Not used.** Shown honestly as roadmap, not claimed. |
+| Third-party audit | Not done. Self-audit log: [docs/AUDIT.md](docs/AUDIT.md). |
 
 ## How it works
+
 ```mermaid
 flowchart LR
-  O[Owner wallet] -- policy / allowlist / pause / withdraw --> V[AgentAllowance vault]
-  A[Agent: Node loop + risk grader + alerts] -- payDues(circle) --> V
-  V -- contributeFor(owner) --> C[EsusuCircle: native or ERC-20]
+  O[Owner wallet] -- limits / allowlists / kill switch / withdraw --> V[AgentAllowance vault]
+  A[AI agent: decision core + alerts] -- "lane 1: payDues(circle)" --> V
+  A -- "lane 2: payService(provider, amount, ref)" --> V
+  V -- contributeFor(owner) --> C[EsusuCircle]
+  V -- pays allowlisted provider --> P[Risk-report API over HTTP 402]
   M[Other members] -- join(slot) / contribute --> C
-  A -- settleRound --> C
   R[EsusuRegistry: factory, fee, reputation] -- deploys --> C
   C -- onPaid / onDefault / onCompleted --> R
   R -- scoreOf, minScore gate --> C
-  C -- credit then withdraw --> O
 ```
-The agent's `decide()` is a pure function (no LLM): `pay | settle | wait | alert | idle`. It alerts the owner on Telegram (optional) *before* a deadline if it cannot pay (vault empty, paused, expired, not allowlisted). An LLM may write a one-sentence explanation after the fact; it never makes a decision.
 
-## What's used, and what's deliberately not
-| Surface | Used | Evidence / reason |
+**Slot-priced collateral.** In a circle of `n`, slot `s` (0 = paid first) locks `dues × max(1, n−1−s)`. After being paid, a member still owes `n−1−s` more rounds, which the collateral covers exactly. The randomized tests check this holds after every transaction.
+
+## Both ideas, fully built
+
+| Idea | What was asked | Where it is |
 |---|---|---|
-| Portaldot V3 EVM (chain 420420777), Solidity 0.8.24 | Yes, deploy pending | `scripts/deploy.js` writes `deployments/portaldot.json` |
-| Native POT and any ERC-20 (stable-value dues) | Yes | ERC-20 suite, browser test, fee-on-transfer tokens rejected |
-| OpenZeppelin (ReentrancyGuard, SafeERC20, Ownable) | Yes | disclosed below |
-| Portaldot WASM / ink! | **Not used** | No honest interop to claim yet; see ARCHITECTURE.md "Open question" |
-| Cross-chain | No | Out of scope |
+| **1. Esusu / ajo on-chain** | Rotating savings, escrowed contributions, payout order, default penalties | Circles with chosen payout slots, collateral, slashing, strike rule, pull payouts, ERC-20 stable dues, leave-before-start, reputation gating, 0.5% fee (cap 2%) |
+| **2. Agent allowance** | Wallet for AI agents with spend limits, whitelisted targets, kill switch, a demo agent that **pays for APIs** | `AgentAllowance`: per-payment and per-period caps, per-provider caps, allowlists, expiry, pause, can't pay itself. Demo agent pays a risk-report API over HTTP 402 (`npm run demo:buy`) |
 
-## The thesis, enforced (not asserted)
-| The system decides | The system is structurally prevented from deciding |
+## What the agent can and cannot do (enforced on-chain)
+
+| Can | Cannot |
 |---|---|
-| When to pay (agent policy) | The amount (read from `circle.dues()`) |
-| Which allowlisted circle to pay | Any non-allowlisted or different-asset destination |
-| Settling a finished round | Who benefits (always the vault owner) |
-| Nothing else | Withdrawing, changing policy, un-pausing, acting after expiry |
-| | A paid-out member leaving with less collateral than they still owe (invariant I10) |
+| Pay your dues into circles **you** allowlisted (amount read from the circle, beneficiary always you) | Choose that amount, or pay anyone for you but you |
+| Pay providers **you** allowlisted, within per-payment, per-provider and per-period caps | Pay an address you did not allowlist, or **itself** |
+| Settle finished rounds (anyone can) and alert you early | Withdraw, change limits, un-pause, allowlist anything, or act after expiry |
+| | Worst case if its key is stolen: your own dues pre-paid, plus at most one period's cap to providers you already trust, until you press pause |
 
-## Measured
-| Claim | Result | Reproduce with |
+## What we contribute to the Portaldot ecosystem
+
+1. **A `0x…` → native `5…` address helper**, verified byte-for-byte against the official guide's example ([`lib/portaldot.js`](lib/portaldot.js)). Newcomers need this just to claim test tokens.
+2. **A deploy kit**: local wallet generator, RPC/balance preflight, gas overrides, Remix flatten fallback, and a step-by-step guide for the pitfalls other builders reported ([docs/DEPLOY.md](docs/DEPLOY.md)).
+3. **A reusable on-chain reputation registry** any Portaldot dapp can read with `scoreOf(address)`.
+4. **The bounded-agent vault pattern**, including HTTP 402 payments from an AI agent, as open-source reference code.
+
+## Measured (all local, reproducible)
+
+| Claim | Result | Command |
 |---|---|---|
-| Unit, integration and agent tests | 35 passing | `SOLC_JS=1 npx hardhat test` |
-| 40 seeded random circles (2-8 members, native or ERC-20, random fees, defaults, vanishing members): solvency and debtor-safety asserted after **every** transaction, zero stuck funds | 40 passing | `SOLC_JS=1 npx hardhat test test/fuzz.test.js` (`FUZZ_RUNS=500` for more) |
-| The fuzz suite can fail: with collateral pricing broken it fails 31/40; with slashing not added to the pot it fails 38/40 | Mutation-checked once by hand | edit `collateralFor` / the `pot[r] += cut` line and rerun |
-| The dapp works in a real browser: create/join/pay/settle/withdraw, vault deploy/fund/policy/allowlist/kill switch, ERC-20 approve flows | 32 checks pass | `SOLC_JS=1 node scripts/e2e-browser.js` (needs Chromium; writes `docs/dapp-e2e.png`) |
+| Contracts + agent + service tests | 101 passing (61 + 40 random circles) | `npm test` |
+| Random circles (2 to 8 members, native or ERC-20, random fees, defaults, vanishing members): solvency and debtor-safety asserted after every transaction, no stuck funds | 40 passing (`FUZZ_RUNS=500 npm run test:fuzz` for more) | `npm run test:fuzz` |
+| The fuzz suite can fail: breaking collateral pricing fails 31/40, breaking slashing fails 38/40 | Mutation-checked by hand | edit `collateralFor` or the `pot[r] += cut` line |
+| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist | 39 checks | `npm run e2e` |
+| Settlement gas grows linearly: about 0.45M at 12 members, 0.78M at 24 (hence the 30-member cap) | measured | see [AUDIT](docs/AUDIT.md) |
 
-These ran against local Hardhat chains. **Nothing has run on Portaldot testnet yet.**
+## Docs
 
-## Try it in 30 seconds (local)
-```bash
-npm install
-SOLC_JS=1 npx hardhat test                 # omit SOLC_JS=1 on a machine with normal internet
-SOLC_JS=1 npx hardhat run scripts/demo.js  # guardrails, defaulter slashing, kill switch, reputation
-npm run compile && npm run web             # dapp at http://localhost:5173
-node agent/risk.js <circleAddress> [slot]  # pre-join risk grade for a circle
-```
-
-## Deploy to Portaldot testnet
-Full guide (wallet creation, claiming test POT, Hardhat and Remix routes, troubleshooting): **[docs/DEPLOY.md](docs/DEPLOY.md)**.
-```bash
-npm run wallet        # creates owner + agent keys locally, prints the 0x and the native 5... addresses
-# request test POT for the 5... address (docs/DEPLOY.md step 3), then:
-npm run preflight     # RPC, chain id, balance
-npm run deploy:testnet
-npm run agent
-```
-RPC `https://test-evm-rpc-v3.portaldot.dev`, chain ID `420420777`, symbol `tPOTv3`.
-
-## Business model
-0.5% protocol fee on payouts (hard cap 2%, set per registry, paid to a treasury), charged only when a circle completes a payout. Reputation reads are free, which is the ecosystem hook: lenders and other dapps can gate on `scoreOf`.
+[Judge guide](docs/JUDGES.md) · [Architecture and invariants](ARCHITECTURE.md) · [Self-audit](docs/AUDIT.md) · [Deploy to Portaldot](docs/DEPLOY.md) · [Roadmap](ROADMAP.md) · [Grant and sponsor brief](docs/GRANTS.md) · [Business model](docs/BUSINESS.md) · [3-minute demo script](docs/DEMO_SCRIPT.md) · [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
 ## Limitations, stated plainly
-- **Not audited** by a third party. Do not use real funds. See [docs/AUDIT.md](docs/AUDIT.md) for what was found and fixed, and the residual risks.
-- Members who default **before** being paid are only covered by their collateral (one `dues` per missed round). A very early miss by a late-slot member (floor collateral of one `dues`) can shorten later pots; the shortfall is explicit and the contract stays solvent, but the recipient absorbs it. Use `minScore` gating for higher-trust circles.
-- Reputation can be inflated by Sybil circles among friends. It is a signal, not proof of personhood.
-- Slots are chosen first-come; there is no auction or randomisation.
-- Settlement is permissionless but someone (the agent or a member) must call `settleRound`; there is no on-chain keeper.
+
+- **Not audited.** Do not use real funds. Residual design risks (late-slot early defaults, Sybil reputation, first-come slots) are in [docs/AUDIT.md](docs/AUDIT.md).
+- **Nothing has run on Portaldot testnet yet.** Reported chain quirks (inflated gas estimates, raw EVM transactions rejected for one team, native 14 vs EVM 18 decimals, missing logs for native-path calls) are unverified by us and handled with fallbacks in the deploy guide.
+- A strike is permanent: a member who misses once forfeits their payout slot even if they keep paying.
 - The risk grade is a transparent heuristic, not a prediction.
-- Only the native token and well-behaved ERC-20s are supported (fee-on-transfer and rebasing tokens are rejected or unsupported).
-- Portaldot testnet behaviour (gas, finality, log-query limits) is unverified until the first deploy.
+- Only native tokens and well-behaved ERC-20s are supported; fee-on-transfer tokens are rejected (tested).
+- The paid-API verifier is token-based (ERC-20); the native-coin path is not implemented.
 
 ## Disclosures
-Third-party: Hardhat, ethers v6, dotenv, solc-js, playwright-core (tests only), OpenZeppelin Contracts 5.0.2. Agent explanation text optionally uses the Anthropic API. Hackathon-period code (Oct 2026). Not financial advice.
+
+Third-party: Hardhat, ethers v6, OpenZeppelin Contracts 5.0.2, dotenv, solc-js, playwright-core (tests only). The agent's optional plain-language explanations use the Anthropic API and never influence a decision. Hackathon-period code (Oct 2026), MIT licensed. Not financial advice.
