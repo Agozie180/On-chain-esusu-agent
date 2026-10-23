@@ -78,7 +78,7 @@ describe("EsusuRegistry: factory, reputation, gating, fee", () => {
     const F = await ethers.getContractFactory("EsusuCircle");
     await expect(reg.connect(a).createCircle(ZERO, 0, 3, DUR, 0)).to.be.revertedWithCustomError(F, "BadConfig");
     await expect(reg.connect(a).createCircle(ZERO, D, 1, DUR, 0)).to.be.revertedWithCustomError(F, "BadConfig");
-    await expect(reg.connect(a).createCircle(ZERO, D, 51, DUR, 0)).to.be.revertedWithCustomError(F, "BadConfig");
+    await expect(reg.connect(a).createCircle(ZERO, D, 31, DUR, 0)).to.be.revertedWithCustomError(F, "BadConfig");
     await expect(reg.connect(a).createCircle(ZERO, D, 3, 10, 0)).to.be.revertedWithCustomError(F, "BadConfig");
   });
 });

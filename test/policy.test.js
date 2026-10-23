@@ -26,6 +26,9 @@ describe("agent decision core (deterministic)", () => {
     expect(decide({ ...base, allowlisted: false }).action).to.equal("alert");
     expect(decide({ ...base, now: 2000, expiry: 1500 })).to.include({ action: "alert", severity: "critical" });
   });
+  it("alerts when the circle uses a different asset than the vault", () => {
+    expect(decide({ ...base, assetMatch: false })).to.include({ action: "alert", severity: "warn" });
+  });
   it("is a pure function", () => {
     expect(decide(base)).to.deep.equal(decide({ ...base }));
   });
