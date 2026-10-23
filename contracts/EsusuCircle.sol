@@ -23,12 +23,17 @@ interface IEsusuRegistry {
 ///    remaining obligation is (size - 1 - slot) * dues, which the collateral covers exactly.
 ///    => a member who has been paid can never leave the circle owing it money (invariant I10).
 ///  - A member who misses a round loses `dues` of collateral into that round's pot and is flagged.
-///  - A flagged member forfeits their payout slot; the pot rolls to the next slot.
+///  - STRIKE RULE: a flagged (defaulted) member forfeits their payout slot for good, even if they keep paying later
+///    rounds; the pot rolls to the next slot (last slot: split among members who never defaulted).
 ///  - Payouts and refunds are pull-based. A protocol fee (<= 2%) is taken from payouts only.
 contract EsusuCircle is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum State { Open, Active, Completed }
+
+    /// @dev settleRound loops over every member (~30k gas each, measured: 1.5M gas at 50). Real ajo groups are small;
+    ///      30 keeps settlement cheap even if the target chain prices gas unexpectedly.
+    uint256 public constant MAX_SIZE = 30;
 
     // ---------------------------------------------------------------- config
     address public immutable registry;     // optional (zero = standalone, no reputation)
@@ -86,7 +91,7 @@ contract EsusuCircle is ReentrancyGuard {
         address registry_, address creator_, address token_, uint256 dues_, uint256 size_,
         uint256 roundDuration_, uint256 minScore_, uint16 feeBps_, address treasury_
     ) {
-        if (dues_ == 0 || size_ < 2 || size_ > 50 || roundDuration_ < 60) revert BadConfig();
+        if (dues_ == 0 || size_ < 2 || size_ > MAX_SIZE || roundDuration_ < 60) revert BadConfig();
         if (feeBps_ > 200 || (feeBps_ > 0 && treasury_ == address(0))) revert BadConfig();
         if (minScore_ > 0 && registry_ == address(0)) revert BadConfig();
         registry = registry_;
@@ -294,6 +299,7 @@ contract EsusuCircle is ReentrancyGuard {
     }
 
     /// @notice Everything the contract owes, for solvency checks: balance must equal this.
+    /// @param extra non-member addresses that may hold credit (treasury, creator). MUST NOT include members (they are counted already).
     function liabilities(address[] calldata extra) external view returns (uint256 total) {
         for (uint256 i = 0; i < size; i++) {
             address m = slotOwner[i];

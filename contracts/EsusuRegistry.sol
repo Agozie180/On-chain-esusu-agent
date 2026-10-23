@@ -1,15 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {EsusuCircle} from "./EsusuCircle.sol";
 
 /// @title EsusuRegistry
 /// @notice Factory + portable reputation for esusu circles.
 ///         Only circles deployed by this registry can write reputation, so a score cannot be
 ///         forged by an arbitrary contract. Any protocol can read `scoreOf(address)`.
-contract EsusuRegistry is Ownable {
+interface ICircleSize {
+    function size() external view returns (uint256);
+}
+
+/// @dev Owner powers are deliberately tiny: set the fee (capped at 2%) and treasury for FUTURE circles. Every circle copies
+///      fee and treasury as immutables at creation, so the owner can never change the terms of an existing circle,
+///      pause it, or touch its funds.
+contract EsusuRegistry is Ownable2Step {
     uint16 public constant MAX_FEE_BPS = 200; // 2%
+    /// @notice Circles smaller than this earn no reputation. Two friends running a 2-person circle should not mint credit.
+    uint256 public constant MIN_REP_SIZE = 3;
 
     struct Rep {
         uint32 completed;   // circles finished without a default
@@ -64,8 +73,13 @@ contract EsusuRegistry is Ownable {
         _;
     }
 
+    /// Defaults always count; credit only counts for circles of at least MIN_REP_SIZE members.
+    function _eligible() internal view returns (bool) {
+        return ICircleSize(msg.sender).size() >= MIN_REP_SIZE;
+    }
+
     function onPaid(address member) external onlyCircle {
-        unchecked { _rep[member].paidRounds += 1; }
+        if (_eligible()) { unchecked { _rep[member].paidRounds += 1; } }
     }
 
     function onDefault(address member) external onlyCircle {
@@ -73,7 +87,7 @@ contract EsusuRegistry is Ownable {
     }
 
     function onCompleted(address member) external onlyCircle {
-        unchecked { _rep[member].completed += 1; }
+        if (_eligible()) { unchecked { _rep[member].completed += 1; } }
     }
 
     // ----------------------------------------------------------------- views
