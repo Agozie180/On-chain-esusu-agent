@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx hardhat compile
+      - name: Unit, integration, agent and 40-circle fuzz tests
+        run: npx hardhat test
+  browser:
+    runs-on: ubuntu-latest
+    needs: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx hardhat compile && node scripts/build-web.js
+      - run: npx playwright-core install --with-deps chromium
+      - name: Real-browser end-to-end test of the dapp
+        run: node scripts/e2e-browser.js
