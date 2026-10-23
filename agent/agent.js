@@ -18,6 +18,7 @@ const VAULT_ABI = [
   "function payDues(address circuit)", "function token() view returns (address)", "function balance() view returns (uint256)",
   "function allowedCircuit(address) view returns (bool)", "function paused() view returns (bool)", "function expiry() view returns (uint256)",
 ];
+const REGISTRY_ABI = ["function circlesCount() view returns (uint256)", "function circlesPage(uint256,uint256) view returns (address[])"];
 const STATE_FILE = process.env.AGENT_STATE_FILE || ".agent-state.json";
 
 function loadState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, "utf8")); } catch { return {}; } }
@@ -37,7 +38,21 @@ async function explain(record) {
   } catch { return null; }
 }
 
-async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits, lead, state = {}, onEvent = () => {} }) {
+/** Circles of this registry the owner is currently in (not completed). Lets the agent run with zero manual circle config. */
+async function discover({ provider, registryAddr, ownerAddr }) {
+  const reg = new ethers.Contract(registryAddr, REGISTRY_ABI, provider);
+  const n = Number(await reg.circlesCount()), found = [];
+  for (let off = 0; off < n; off += 50) {
+    for (const a of await reg.circlesPage(off, 50)) {
+      const c = new ethers.Contract(a, CIRCLE_ABI, provider);
+      if ((await c.isMember(ownerAddr)) && Number(await c.state()) !== 2) found.push(a);
+    }
+  }
+  return found;
+}
+
+async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits = [], registryAddr, lead, state = {}, onEvent = () => {} }) {
+  if (registryAddr) circuits = [...new Set([...circuits, ...(await discover({ provider, registryAddr, ownerAddr }))])];
   const vault = new ethers.Contract(vaultAddr, VAULT_ABI, wallet);
   const [vaultToken, paused, expiry] = await Promise.all([vault.token(), vault.paused(), vault.expiry()]);
   const vaultBalance = await vault.balance();
@@ -53,7 +68,7 @@ async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits, lead, st
 
     const d = decide({
       state: Number(st), isMember, now, deadline: Number(deadline), ownerPaid, paidCount: Number(paidCount), size: Number(size),
-      vaultBalance: token === vaultToken ? vaultBalance : 0n, dues, allowlisted: allowlisted && token === vaultToken,
+      vaultBalance: token === vaultToken ? vaultBalance : 0n, dues, allowlisted, assetMatch: token === vaultToken,
       paused, expiry: Number(expiry), leadSeconds: lead,
     });
     const record = { ts: new Date().toISOString(), circuit: addr, round: Number(round), ...d };
@@ -82,14 +97,15 @@ async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits, lead, st
 }
 
 async function main() {
-  const miss = ["AGENT_PRIVATE_KEY", "VAULT", "OWNER", "CIRCUITS"].filter((k) => !process.env[k]);
+  const miss = ["AGENT_PRIVATE_KEY", "VAULT", "OWNER"].filter((k) => !process.env[k]);
+  if (!process.env.CIRCUITS && !process.env.REGISTRY) miss.push("CIRCUITS or REGISTRY");
   if (miss.length) throw new Error(`Missing env: ${miss.join(", ")} (see .env.example)`);
   const provider = new ethers.JsonRpcProvider(process.env.PORTALDOT_EVM_RPC || "https://test-evm-rpc-v3.portaldot.dev");
   const wallet = new ethers.Wallet(process.env.AGENT_PRIVATE_KEY, provider);
   const cfg = { provider, wallet, vaultAddr: process.env.VAULT, ownerAddr: process.env.OWNER,
-    circuits: process.env.CIRCUITS.split(",").map((s) => s.trim()).filter(Boolean), lead: Number(process.env.LEAD_SECONDS ?? 3600) };
+    circuits: (process.env.CIRCUITS || "").split(",").map((s) => s.trim()).filter(Boolean), registryAddr: process.env.REGISTRY || undefined, lead: Number(process.env.LEAD_SECONDS ?? 3600) };
   const every = Number(process.env.POLL_SECONDS ?? 60) * 1000;
-  console.log(JSON.stringify({ msg: "esusu agent started", agent: wallet.address, circuits: cfg.circuits }));
+  console.log(JSON.stringify({ msg: "esusu agent started", agent: wallet.address, circuits: cfg.circuits, registry: cfg.registryAddr || null }));
   let state = loadState();
   for (;;) {
     try { state = await tick({ ...cfg, state }); saveState(state); } catch (e) { console.error(JSON.stringify({ error: e.message })); }
@@ -98,4 +114,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e.message); process.exit(1); });
-module.exports = { tick };
+module.exports = { tick, discover };

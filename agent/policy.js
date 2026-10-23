@@ -13,6 +13,7 @@
  * @param {bigint} s.vaultBalance vault balance in the circle's asset
  * @param {bigint} s.dues dues per round
  * @param {boolean} s.allowlisted is this circle on the vault allowlist
+ * @param {boolean} [s.assetMatch] circle's asset equals the vault's asset (default true)
  * @param {boolean} s.paused vault paused
  * @param {number} s.expiry agent authority expiry (unix seconds)
  * @param {number} s.leadSeconds pay when this close to the deadline
@@ -29,6 +30,7 @@ function decide(s) {
   if (s.ownerPaid) return { action: "wait", reason: "owner already paid; waiting for others or deadline" };
 
   const left = s.deadline - s.now;
+  if (s.assetMatch === false) return { action: "alert", severity: "warn", reason: "circle uses a different asset than this vault; the agent cannot pay it" };
   // Conditions where the agent cannot or may not pay: tell the human early, before the deadline bites.
   if (s.paused) return { action: "alert", severity: left < s.leadSeconds ? "critical" : "warn", reason: "agent is paused by the owner; dues are unpaid" };
   if (!s.allowlisted) return { action: "alert", severity: "warn", reason: "circle is not on the vault allowlist; agent cannot pay" };
