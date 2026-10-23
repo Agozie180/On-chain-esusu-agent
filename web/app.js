@@ -1,8 +1,9 @@
 /* On-chain Esusu-agent dapp v2. No build step. Needs an EVM wallet (e.g. MetaMask). */
 (() => {
-  const CHAIN = { chainId: "0x" + (420420777).toString(16), chainName: "PortaldotV3 Testnet",
-    nativeCurrency: { name: "tPOTv3", symbol: "tPOTv3", decimals: 18 }, rpcUrls: ["https://test-evm-rpc-v3.portaldot.dev"],
-    blockExplorerUrls: ["https://node-console.portaldot.dev/"] };
+  const CFG = Object.assign({ registry: "", rpc: "https://test-evm-rpc-v3.portaldot.dev", chainId: 420420777, network: "PortaldotV3 Testnet", symbol: "tPOTv3",
+    explorer: "https://node-console.portaldot.dev/" }, window.ESUSU_CONFIG || {});
+  const CHAIN = { chainId: "0x" + Number(CFG.chainId).toString(16), chainName: CFG.network,
+    nativeCurrency: { name: CFG.symbol, symbol: CFG.symbol, decimals: 18 }, rpcUrls: [CFG.rpc], blockExplorerUrls: CFG.explorer ? [CFG.explorer] : [] };
   const STATES = ["Open (filling)", "Active", "Completed"];
   const ZERO = ethers.ZeroAddress;
   const $ = (id) => document.getElementById(id);
@@ -10,8 +11,11 @@
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  let provider, signer, me, reg, circle, vault, token;
-  let asset = { native: true, symbol: "tPOTv3", decimals: 18 };
+  let provider, signer = null, me = ethers.ZeroAddress, reg, circle, vault, token;
+  const readProvider = new ethers.JsonRpcProvider(CFG.rpc, Number(CFG.chainId), { staticNetwork: true });
+  provider = readProvider;
+  let asset = { native: true, symbol: CFG.symbol, decimals: 18 };
+  const bind = (c) => (c ? c.connect(signer || provider) : c);
   let selectedSlot = null;
 
   const fmt = (w) => { const s = ethers.formatUnits(w, asset.decimals); return (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s) + " " + asset.symbol; };
@@ -20,7 +24,7 @@
   function log(msg) { const el = $("log"); el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + el.textContent; }
 
   async function run(label, fn) { try { log(label + "…"); const r = await fn(); log(label + " ✔"); return r; } catch (e) { log(`${label} ✖ ${errName(e)}`); } }
-  async function send(label, getTx) { return run(label, async () => { const tx = await getTx(); log("tx " + tx.hash); await tx.wait(); await refresh(); }); }
+  async function send(label, getTx) { if (!(await ensure())) return; return run(label, async () => { const tx = await getTx(); log("tx " + tx.hash); await tx.wait(); await refresh(); }); }
 
   // ------------------------------------------------------------ wallet
   async function connect() {
@@ -28,9 +32,11 @@
     provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = await provider.getSigner(); me = await signer.getAddress();
+    reg = bind(reg); circle = bind(circle); vault = bind(vault); token = bind(token);
     $("btnConnect").textContent = short(me);
+    $("modeBanner").textContent = "Wallet connected: you can act.";
     const net = await provider.getNetwork();
-    log(Number(net.chainId) === 420420777 ? "Connected to Portaldot testnet as " + me : `Connected to chain ${net.chainId}. Use "Add / switch to Portaldot testnet".`);
+    log(Number(net.chainId) === Number(CFG.chainId) ? `Connected to ${CFG.network} as ${me}` : `Connected to chain ${net.chainId}, expected ${CFG.chainId}. Use "Add Portaldot testnet".`);
     return true;
   }
   const ensure = async () => (signer ? true : connect());
@@ -44,17 +50,17 @@
   // ---------------------------------------------------------- registry
   async function loadRegistry(addr) {
     if (!ethers.isAddress(addr)) return log("Enter a valid registry address.");
-    if (!(await ensure())) return;
-    reg = new ethers.Contract(addr, ESUSU.registry.abi, signer);
+    reg = new ethers.Contract(addr, ESUSU.registry.abi, signer || provider);
     store.set("esusu.registry", addr); $("regAddr").value = addr;
     await refresh();
   }
   async function renderRegistry() {
     if (!reg) return;
     const [count, fee, score, rep] = await Promise.all([reg.circlesCount(), reg.feeBps(), reg.scoreOf(me), reg.reputation(me)]);
+    const mine = signer ? `${score} / 1000` : "connect wallet";
     $("regKv").style.display = "grid";
-    $("regKv").innerHTML = [["Circles", count], ["Protocol fee", Number(fee) / 100 + "%"], ["My reputation", `${score} / 1000`],
-      ["My history", `${rep.completed} done · ${rep.paidRounds} paid · ${rep.defaults} missed`]].map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join("");
+    $("regKv").innerHTML = [["Circles", count], ["Protocol fee", Number(fee) / 100 + "%"], ["My reputation", mine],
+      ["My history", signer ? `${rep.completed} done · ${rep.paidRounds} paid · ${rep.defaults} missed` : "-"]].map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join("");
     $("discover").style.display = "block";
     const addrs = await reg.circlesPage(count > 20n ? count - 20n : 0n, 20n);
     const rows = [];
@@ -75,12 +81,11 @@
 
   // ------------------------------------------------------------ circle
   async function loadCircle(addr) {
-    if (!(await ensure())) return;
-    circle = new ethers.Contract(addr, ESUSU.circle.abi, signer);
+    circle = new ethers.Contract(addr, ESUSU.circle.abi, signer || provider);
     store.set("esusu.circle", addr); selectedSlot = null;
     const tk = await circle.token();
     if (tk === ZERO) { asset = { native: true, symbol: "tPOTv3", decimals: 18 }; token = null; }
-    else { token = new ethers.Contract(tk, ESUSU.erc20, signer); asset = { native: false, symbol: await tokenSymbol(tk), decimals: await tokenDecimals(tk) }; }
+    else { token = new ethers.Contract(tk, ESUSU.erc20, signer || provider); asset = { native: false, symbol: await tokenSymbol(tk), decimals: await tokenDecimals(tk) }; }
     vault = null; $("vaultView").style.display = "none";
     const saved = store.get("esusu.vault." + tk);
     if (saved) $("vaultAddr").value = saved; else $("vaultAddr").value = "";
@@ -153,7 +158,7 @@
   // -------------------------------------------------------------- vault
   async function loadVault(addr) {
     if (!ethers.isAddress(addr)) return log("Enter a valid vault address.");
-    vault = new ethers.Contract(addr, ESUSU.vault.abi, signer);
+    vault = new ethers.Contract(addr, ESUSU.vault.abi, signer || provider);
     store.set("esusu.vault." + (token ? await token.getAddress() : ZERO), addr); $("vaultAddr").value = addr;
     await refresh();
   }
@@ -183,7 +188,7 @@
 
   // ------------------------------------------------------------ actions
   function wire() {
-    $("btnConnect").onclick = connect; $("btnNet").onclick = switchNet;
+    $("btnConnect").onclick = connect; $("btnNet").onclick = switchNet; $("btnNet").textContent = "Add " + CFG.network;
     $("btnLoadReg").onclick = () => loadRegistry($("regAddr").value.trim());
     $("btnDeployReg").onclick = async () => { if (!(await ensure())) return;
       await run("Deploy registry", async () => {
@@ -225,11 +230,17 @@
       return send("Save policy", () => vault.setPolicy(a, units("pPerTx"), units("pPeriodCap"), BigInt(Math.round(Number($("pHours").value) * 3600)), BigInt(expiry))); };
     $("btnAllow").onclick = async () => send("Allowlist circle", async () => vault.setCircuit(await circle.getAddress(), true));
     $("btnDisallow").onclick = async () => send("Remove circle", async () => vault.setCircuit(await circle.getAddress(), false));
+    $("btnPayee").onclick = () => { const p = $("payeeAddr").value.trim(); if (!ethers.isAddress(p)) return log("Enter the provider's address."); return send("Allow provider", () => vault.setPayee(p, true, units("payeeCap"))); };
+    $("btnPayeeOff").onclick = () => { const p = $("payeeAddr").value.trim(); if (!ethers.isAddress(p)) return log("Enter the provider's address."); return send("Remove provider", () => vault.setPayee(p, false, 0n)); };
     $("btnPause").onclick = () => send("Pause agent", () => vault.setPaused(true));
     $("btnUnpause").onclick = () => send("Resume agent", () => vault.setPaused(false));
 
     const q = new URLSearchParams(location.search);
-    $("regAddr").value = q.get("registry") || store.get("esusu.registry") || "";
+    $("regAddr").value = q.get("registry") || CFG.registry || store.get("esusu.registry") || "";
+    if ($("regAddr").value && ethers.isAddress($("regAddr").value)) {
+      loadRegistry($("regAddr").value).catch((e) => log("Could not read the chain without a wallet (" + errName(e) + "). Connect a wallet to continue."));
+      if (CFG.demoCircle && !q.get("registry")) loadCircle(CFG.demoCircle).catch(() => {});
+    }
     if (window.ethereum?.on) { window.ethereum.on("accountsChanged", () => location.reload()); window.ethereum.on("chainChanged", () => location.reload()); }
     setInterval(() => { if (circle || reg) refresh(); }, 20000);
   }

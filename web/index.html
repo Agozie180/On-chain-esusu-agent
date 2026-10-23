@@ -31,21 +31,34 @@
   .slot { border:1px solid var(--line); border-radius:10px; padding:8px; font-size:13px; background:var(--bg); } .slot.free { cursor:pointer; border-color:var(--green); } .slot.sel { background:var(--green2); }
   #log { font:12.5px/1.5 ui-monospace,Menlo,monospace; max-height:220px; overflow:auto; background:var(--bg); border-radius:10px; padding:10px; white-space:pre-wrap; word-break:break-all; }
   .small { font-size:13px; color:var(--mute); } a { color:var(--green); } .risk { margin-top:8px; font-size:14px; }
+  .hero { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin:0 0 16px; }
+  .hero .big { font-size:26px; line-height:1.15; margin:0 0 8px; letter-spacing:-.02em; } .hero .lead { margin:0 0 12px; font-size:16px; }
+  .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin:10px 0; }
+  .steps div { background:var(--green2); border-radius:10px; padding:10px 12px; } .steps b { display:block; font-size:14px; margin-bottom:2px; } .steps span { font-size:13px; color:var(--mute); }
+  footer { text-align:center; font-size:13px; color:var(--mute); padding:8px 0 24px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>On-chain <span>Esusu-agent</span></h1>
-    <div class="row" style="margin:0"><button id="btnNet">Add / switch to Portaldot testnet</button><button id="btnConnect" class="primary">Connect wallet</button></div>
+    <div class="row" style="margin:0"><button id="btnNet">Add Portaldot testnet</button><button id="btnConnect" class="primary">Connect wallet</button></div>
   </header>
 
-  <div class="card thesis"><b>The agent can pay your dues. It can never pay itself, choose the amount, or send money anywhere you have not allowlisted.</b>
-    <div class="small" style="margin-top:4px">Circle rules and your reputation live on-chain. A paid-out member can never leave the circle in debt.</div></div>
+  <section class="hero">
+    <h2 class="big">Ajo, but nobody can run away with the pot.</h2>
+    <p class="lead">Save in a rotating circle (esusu / ajo). Rules, collateral and your reputation live on-chain. Your AI agent pays your dues on time from a vault <b>you</b> cap, and can never take more than you allow.</p>
+    <div class="steps">
+      <div><b>1 · Pick a payout slot</b><span>Earlier slot = paid sooner, locks more collateral. A risk grade shows what you are joining.</span></div>
+      <div><b>2 · Your agent pays on time</b><span>It only pays allowlisted circles and providers, inside limits you set, with a kill switch.</span></div>
+      <div><b>3 · Miss one? The pot is whole</b><span>Collateral covers it, you take a strike, and your portable score updates for every circle.</span></div>
+    </div>
+    <div class="small" id="modeBanner">Read-only until you connect a wallet. Built on Portaldot V3 (EVM).</div>
+  </section>
 
   <div class="card">
     <h2>Registry</h2>
-    <p class="sub">The registry creates circles and records everyone's reputation. Paste its address (from the deployment) or deploy a fresh one.</p>
+    <p class="sub">The registry creates circles and records everyone's reputation. It loads automatically on the live site; locally, paste its address or deploy a fresh one.</p>
     <div class="row">
       <div class="grow"><label>Registry address</label><input id="regAddr" placeholder="0x..."></div>
       <button id="btnLoadReg">Load</button><button id="btnDeployReg">Deploy registry</button>
@@ -112,6 +125,13 @@
         <button id="btnPolicy" class="primary">Save policy</button><button id="btnAllow">Allowlist this circle</button><button id="btnDisallow">Remove this circle</button>
         <button id="btnPause" class="danger">Kill switch: pause agent</button><button id="btnUnpause">Resume agent</button>
       </div>
+      <h2 style="margin-top:16px">Service providers the agent may pay</h2>
+      <p class="sub">Lane 2: APIs, keepers or data feeds. Each has its own per-period cap on top of the shared limits. The agent can never pay itself.</p>
+      <div class="grid">
+        <div><label>Provider address</label><input id="payeeAddr" placeholder="0x..."></div>
+        <div><label>Max per period</label><input id="payeeCap" value="3"></div>
+      </div>
+      <div class="row"><button id="btnPayee" class="primary">Allow provider</button><button id="btnPayeeOff">Remove provider</button></div>
       <h2 style="margin-top:16px">Agent activity</h2>
       <div id="activity" class="small">No agent payments yet.</div>
     </div>
@@ -119,9 +139,12 @@
 
   <div class="card"><h2>Log</h2><div id="log"></div>
     <p class="small">Run the agent with <code>npm run agent</code>. Unaudited hackathon code: use testnet funds only.</p></div>
+
+  <footer><a href="https://github.com/Agozie180/On-chain-esusu-agent">Source</a> · <a href="https://github.com/Agozie180/On-chain-esusu-agent/blob/main/docs/JUDGES.md">Judge guide</a> · <a href="https://github.com/Agozie180/On-chain-esusu-agent/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://github.com/Agozie180/On-chain-esusu-agent/blob/main/docs/AUDIT.md">Self-audit</a></footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="config.js"></script>
 <script src="contracts.js"></script>
 <script src="risk.js"></script>
 <script src="app.js"></script>
