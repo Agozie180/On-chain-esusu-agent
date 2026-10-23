@@ -17,7 +17,11 @@
     "wallet": "node scripts/wallet.js",
     "wallet:show": "node scripts/wallet.js --show",
     "preflight": "node scripts/preflight.js",
-    "flatten": "node scripts/flatten.js"
+    "flatten": "node scripts/flatten.js",
+    "service": "node agent/service.js",
+    "demo:local": "node scripts/local-demo.js",
+    "demo:buy": "node scripts/buy-report.js",
+    "publish:config": "node scripts/publish-config.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

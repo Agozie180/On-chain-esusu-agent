@@ -48,6 +48,10 @@ async function main() {
   const expiry = Math.floor(Date.now() / 1000) + 14 * 24 * 3600;
   await send("setPolicy", vault.setPolicy(agentAddr, dues, dues * 3n, 24 * 3600, expiry));
   await send("allowCircle", vault.setCircuit(out.circle, true));
+  if (process.env.SERVICE_PAYEE) { // lane 2: let the agent buy from the paid risk-report API
+    await send("allowServicePayee", vault.setPayee(process.env.SERVICE_PAYEE, true, dues * 3n));
+    out.servicePayee = process.env.SERVICE_PAYEE;
+  }
   const slot = 0, col = await circle.collateralFor(slot);
   if (token) {
     await send("fundVault", token.transfer(out.vault, dues * 5n));

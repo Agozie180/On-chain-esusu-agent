@@ -6,3 +6,4 @@ cache/
 .agent-state.json
 deployments/hardhat.json
 deployments/localhost.json
+.local-demo.json

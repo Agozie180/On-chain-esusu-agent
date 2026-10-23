@@ -25,7 +25,9 @@ async function waitRpc() {
 
 (async () => {
   const node = spawn("npx", ["hardhat", "node", "--port", "8545"], { env: { ...process.env, SOLC_JS: "1" }, stdio: "ignore" });
+  const LOCAL_CFG = `window.ESUSU_CONFIG = { registry: "", rpc: "${RPC}", chainId: 31337, network: "Hardhat local", symbol: "tPOTv3", explorer: "" };`;
   const srv = http.createServer((req, res) => {
+    if (req.url.split("?")[0] === "/config.js") { res.writeHead(200, { "content-type": "text/javascript" }); return res.end(LOCAL_CFG); }
     const f = path.join(WEB, req.url.split("?")[0] === "/" ? "index.html" : req.url.split("?")[0]);
     if (!f.startsWith(WEB) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { "content-type": types[path.extname(f)] || "text/plain" }); res.end(fs.readFileSync(f));
@@ -38,7 +40,9 @@ async function waitRpc() {
     const bob = await provider.getSigner(accts[2]);
     const me = accts[1];
 
-    browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--no-sandbox"] });
+    const sandboxChrome = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+    const executablePath = process.env.CHROMIUM_PATH || (fs.existsSync(sandboxChrome) ? sandboxChrome : undefined); // else Playwright's own install (CI)
+    browser = await chromium.launch({ executablePath, args: ["--no-sandbox"] });
     const page = await browser.newPage();
     const pageErrors = [];
     page.on("pageerror", (e) => pageErrors.push(e.message));
@@ -132,6 +136,34 @@ async function waitRpc() {
     await click("#btnDeployVault"); check("ERC-20 vault deploys for the circle's asset", await waitLog("Deploy vault ✔"));
     await sleep(1200);
     check("agent activity panel loads without an RPC error", !(await page.locator("#activity").innerText()).includes("unavailable"), await page.locator("#activity").innerText());
+
+    // ---- read-only mode: no wallet at all, the live circles must still render for a judge who just opens the link
+    const regAddr = await page.inputValue("#regAddr");
+    const ro = await browser.newPage();
+    const roErrors = [];
+    ro.on("pageerror", (e) => roErrors.push(e.message));
+    await ro.route("**/ethers.umd.min.js", (r) => r.fulfill({ contentType: "text/javascript", body: fs.readFileSync(ETHERS) }));
+    await ro.route(RPC + "/**", async (route) => {   // give the local node the CORS headers a public RPC would have
+      const h = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "POST, OPTIONS" };
+      if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: h });
+      const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: route.request().postData() });
+      return route.fulfill({ status: 200, headers: { ...h, "content-type": "application/json" }, body: await r.text() });
+    });
+    await ro.goto(`http://127.0.0.1:${PORT}/?registry=${regAddr}`);
+    await ro.waitForSelector("#circleList button[data-open]", { timeout: 20000 }).catch(() => {});
+    check("read-only: circles are listed with no wallet", (await ro.locator("#circleList").innerText()).includes("joined"), await ro.locator("#circleList").innerText());
+    check("read-only: hero explains the product", (await ro.locator(".hero").innerText()).includes("nobody can run away with the pot"));
+    check("read-only: reputation prompts to connect instead of showing a fake zero", (await ro.locator("#regKv").innerText()).includes("connect wallet"));
+    await ro.locator("#circleList button[data-open]").first().click();
+    await ro.waitForSelector("#circleCard", { state: "visible", timeout: 15000 }).catch(() => {});
+    check("read-only: a circle opens and shows its slots", (await ro.locator("#slots").innerText()).includes("Slot 1"));
+    check("read-only: acting asks for a wallet instead of crashing", await (async () => { await ro.locator("#btnSettle").click({ force: true }).catch(() => {}); await sleep(800); return !roErrors.length; })(), roErrors.join(" | "));
+    await ro.close();
+
+    // ---- service-provider lane controls in the vault panel
+    await page.fill("#payeeAddr", accts[7]); await page.fill("#payeeCap", "1"); await click("#btnPayee");
+    check("owner can allow a service provider from the UI", await waitLog("Allow provider ✔"));
+    await click("#btnPayeeOff"); check("owner can remove a service provider from the UI", await waitLog("Remove provider ✔"));
 
     const errs = (await logText()).split("\n").filter((l) => l.includes("✖"));
     check("no failed actions in the log", errs.length === 0, errs.join(" | "));
