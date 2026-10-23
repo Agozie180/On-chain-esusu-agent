@@ -61,3 +61,9 @@ No lending/yield. No agent custody. No fiat ramp. No audit or production claim.
 - [ ] Architecture diagram (Mermaid in README)
 - [ ] Demo video <= 3 min with a real testnet interaction
 - [ ] DoraHacks check-in by Oct 24 12:00 UTC; final submission by Nov 6 04:00 UTC; pitch deck
+
+## Update: agent vault lanes and new invariants
+- `AgentAllowance` lane 1 `payDues(circle)` and lane 2 `payService(payee, amount, ref)`; shared per-tx and period caps, per-payee caps, expiry, kill switch; the agent cannot pay itself.
+- `payService` emits `ServicePaid(payee, amount, ref)`; the HTTP 402 service verifies the ref, a token Transfer and single use.
+- `MIN_REP_SIZE = 3` for reputation credit; `MAX_SIZE = 30` per circle.
+- Strike rule: a defaulted member forfeits their payout slot; the pot rolls forward.

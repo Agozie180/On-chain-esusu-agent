@@ -1,31 +1,21 @@
-# Handoff: On-chain Esusu-agent (Portaldot Hacker House 2026)
+# Handoff
 
-Updated: 2026-10-22 evening (v2). Keep this current so work can resume in a new chat.
+Project: On-chain Esusu-agent, Portaldot Hacker House 2026. Repo: github.com/Agozie180/On-chain-Esusu-agent
 
-## What exists (all local, nothing on testnet yet)
-- v2 contracts: `EsusuRegistry`, `EsusuCircle` (slot-priced collateral, ERC-20, leave(), fee, reputation gate), `AgentAllowance` (per-asset vault).
-- Agent: `agent/` (pure decision core, risk grader, Telegram alerts, state file).
-- Dapp: `web/` (registry discovery, slot picker, risk grade, ERC-20 approve flows, vault controls).
-- Tests: 35 unit/integration + 40 fuzz circles + 32-check headless-browser e2e. Demo: `scripts/demo.js`.
-- Docs: README (judge-facing), ARCHITECTURE.md, docs/AUDIT.md (findings and residual risks).
+## State
+Built and tested locally: 101 Hardhat tests, 39 browser checks. Docs complete (README, JUDGES, ROADMAP, GRANTS, BUSINESS, SECURITY, AUDIT rounds 1-2, DEPLOY, DEMO_SCRIPT).
+**Not done:** testnet deploy (sandbox cannot reach Portaldot), demo video, making repo public, Pages setup.
 
-## Deadlines (UTC)
-- **Check-in: Oct 24 12:00** (public repo, README, architecture diagram, contract address + tx hash, demo video <= 3 min or live link)
-- Office hour application: Oct 27 12:00 · Final submission / code freeze: Nov 6 04:00
+## Next steps (your machine)
+1. `npm install && npm run wallet && npm run wallet:show`; get tPOTv3 for the 5... addresses (Discord ticket or admins, see docs/DEPLOY.md)
+2. `npm run preflight && npm run deploy:testnet` (or the Remix route)
+3. `npm run publish:config`, commit, push; set Pages source to GitHub Actions
+4. Make repo public; put addresses and tx hashes in README
+5. Record the demo ([script](docs/DEMO_SCRIPT.md)); submit by Oct 24 12:00 UTC check-in
+6. Apply for Office Hours by Oct 27 12:00 UTC (gas/logs, WASM question)
 
-## Deploy tooling (added)
-- `docs/DEPLOY.md`: wallet, faucet, deploy guide. `npm run wallet | wallet:show | preflight | deploy:testnet | flatten`.
-- 0x to 5... mapping is computed in `lib/portaldot.js` and matches the official guide's example. Faucet needs the **5...** address.
-- The build sandbox cannot reach Portaldot (403), so nothing has been deployed yet. Keys must be created on the user's machine.
+## Deadlines
+Check-in Oct 24 12:00 UTC; Office Hours Oct 27 12:00 UTC; code freeze Nov 6 04:00 UTC. Need at least 3 commits in the window.
 
-## Next steps, in order
-1. Create public repo `Agozie180/On-chain-Esusu-agent`, push (author Agozie180 only, no co-author trailers).
-2. Get test POT (native address starting with 5; Discord ticket or DM admin).
-3. `npx hardhat run scripts/deploy.js --network portaldot` (omit SOLC_JS offline workaround); paste addresses and tx hashes into README. Fix whatever Portaldot's EVM does differently (gas, log range in the dapp's activity panel, finality).
-4. Open the dapp against testnet (`npm run web`), run a real 3-person circle, record the 90s demo (script in ARCHITECTURE.md).
-5. Submit the check-in on DoraHacks. Then: run the agent as a service, pitch deck, decide the WASM/ink! question via Office Hours.
-
-## Notes
-- Compile offline with `SOLC_JS=1`; on a normal machine omit it. Do not commit `.env`; never share keys.
-- The WASM/ink! side is NOT built and must not be claimed (see ARCHITECTURE.md open question).
-- Parallel deadlines: Qloo (Oct 31 4:45am Lagos), BLI (Nov 1).
+## Commit rule
+Author Agozie180 only, no Co-Authored-By or Claude trailers.

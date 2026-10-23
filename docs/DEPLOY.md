@@ -112,6 +112,9 @@ Connect MetaMask (the owner account), press **Add / switch to Portaldot testnet*
 
 To run the agent, fill `VAULT`, `OWNER`, `CIRCUITS` (the circle address) and `AGENT_PRIVATE_KEY` in `.env`, make sure the agent address has some gas, then `npm run agent`.
 
+## Publish the live app
+After deploying, run `npm run publish:config` to write the addresses into `web/config.js`, commit it, and in GitHub go to Settings, Pages, Source: GitHub Actions. The Pages workflow then serves the dapp read-only for judges.
+
 ## Step 7: Put the proof in the repo
 
 Paste into the README: contract addresses, the deploy transaction hashes, and explorer links. Then commit and push (separate, meaningful commits are better than one big one). For the DoraHacks check-in (Oct 24, 12:00 UTC) you need: repo link, architecture diagram, contract address, a transaction hash, and a demo video (3 minutes max) or a live link.
