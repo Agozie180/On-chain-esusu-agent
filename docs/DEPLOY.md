@@ -2,6 +2,14 @@
 
 Do these on **your own computer**. Everything here is testnet only. Never put a key that holds real money anywhere near this project, and never paste a private key or seed phrase into a chat, a Discord ticket, or a screenshot. Portaldot's team says it will never ask for them.
 
+## Use the existing deployment
+
+The stack is already deployed on chain **420420777**. Start with `npm install` and `npm run web`, then open http://localhost:5173. No wallet or redeployment is required for read-only inspection. The [README proof table](../README.md#testnet-deployment-proof) lists all four contract addresses; [deployments/portaldot.json](../deployments/portaldot.json) contains the 12 finalized receipts, code hashes and setup snapshot.
+
+At the October 24 verification snapshot, the circle was Open with one of three members, dues of 10 mUSD and 15-minute rounds. The owner occupies UI slot 1 (contract slot 0), and the vault holds 50 test mUSD. The remaining two slots need separate members, mock-token collateral/dues and enough native gas. The vault policy expires November 7, 2026 at 21:30:06 UTC. Its agent has a recorded 0.1 tPOTv3; estimate the intended actions before assuming that is sufficient.
+
+The wallet/deployment steps below are for operators. The committed checkpoint belongs to this deployment and its owner: rerunning the script with the same keys/configuration reuses its transactions. For a separate stack, use a separately named Hardhat network and deployment record, preserving this evidence; do not overwrite the checkpoint with an unrelated wallet or local deployment.
+
 ## Network values
 
 | Item | Value |
@@ -28,7 +36,7 @@ Decimals also differ by side: native amounts use 14 decimals, EVM amounts use 18
 
 ## Step 1: Create the wallet
 
-You need two keys: an **owner** (deploys the contracts, owns the vault) and an **agent** (a hot key that only pays gas and can only call `payDues`). Use two separate keys.
+You need two keys: an **owner** (deploys the contracts and owns the vault) and an **agent** (holds gas and can call the vault's bounded dues and service-payment functions). Use two separate keys. The agent can also call permissionless circle settlement.
 
 **Option A: MetaMask (recommended for the owner)**
 1. Install MetaMask and create a **new** wallet or account just for testnet.
@@ -44,7 +52,7 @@ npm run wallet      # creates PRIVATE_KEY and AGENT_PRIVATE_KEY in a git-ignored
 ```
 You can import the owner key into MetaMask (Import account, Private key) to use the dapp.
 
-For Option A, also run `cp .env.example .env`, paste the owner key as `PRIVATE_KEY=0x...`, then `npm run wallet` to generate only the agent key (it never overwrites a key that exists).
+For Option A, copy `.env.example` to `.env` only if `.env` does not already exist. Set the owner key locally as `PRIVATE_KEY=0x...`, then run `npm run wallet` to generate a missing agent key and synchronize public addresses. Existing keys are retained unless you explicitly use `--rotate-agent`; rotation also requires updating any deployed policy.
 
 ## Step 2: Get your `5...` addresses
 
@@ -68,31 +76,38 @@ Tip: ask for **all the addresses you will use in one message**: owner, agent, an
 ## Step 4: Check you are ready
 
 ```bash
+npm run compile
 npm run preflight
 ```
-It confirms the RPC answers, the chain id is `420420777`, and the owner has a non-zero balance, and it warns if the agent has none. Do not continue until both are OK.
+Preflight checks connectivity, chain ID and balances. Before a new registry transaction, it also compares the registry's estimated gas and storage cost with the owner balance. That is only the first deployment step: reserve enough for the token, circle, vault and setup too. The deploy script can fund an empty agent at the end (`AGENT_GAS_TPOT`, default 0.1), but neither a nonzero balance nor that default guarantees later actions are affordable. When a registry transaction is already recorded, preflight reports that fact; the deployment script performs the resume verification.
 
 ## Step 5: Deploy
 
-### Confirmed funding requirement (October 24, 2026)
+### Deployed stack and funding history (October 24, 2026)
 
-The owner wallet has 499.9 tPOTv3, but the registry deployment estimates 1045.38 tPOTv3 upfront. Native `system_dryRun` confirms `Invalid(Payment)`. Portaldot charges storage deposits; `DepositPerByte` is 0.06 tPOTv3. Reducing the gas limit to 8,000,000 fails with `Invalid call: Payment` and does not bypass these costs. The four contract estimates total about 2395.60 before setup, with the circle estimated as a standalone deployment. Request approximately 2500 additional test tokens, then rerun `npm run preflight` and deploy. See `deployments/portaldot-preflight.json` for the observed values.
+The deployment completed after the owner was funded to 2499.9 tPOTv3. All 12 transactions succeeded and were verified against finalized block 180016. Receipt fees, including storage deposits, total 2438.7170914772332804 tPOTv3; agent funding was 0.1 tPOTv3. The remaining owner balance was 61.0829085227667196 tPOTv3. See [deployments/portaldot.json](../deployments/portaldot.json) for the complete snapshot. The committed app configuration and the maintainer's local `.env` now use this deployment; clones do not receive private keys. The build used Solidity 0.8.24, optimizer 200 runs and Paris EVM. No compiler experiment or reduced gas limit was applied.
+
+The following diagnosis records the earlier funding blocker, which is now resolved:
+
+At 499.9 tPOTv3, the owner could not cover the registry's 1045.38 upfront estimate. Native `system_dryRun` returned `Invalid(Payment)`. Portaldot's `DepositPerByte` was 0.06 tPOTv3, and an 8,000,000 gas override failed with `Invalid call: Payment`. The four standalone contract estimates totaled about 2395.60 before setup. An additional 2000 tPOTv3 resolved the shortfall. [Historical preflight evidence](../deployments/portaldot-preflight.json) also records the unapplied via-IR experiment, which reduced the registry estimate to 919.40 but still exceeded the earlier balance. Those measurements are historical, not an outstanding funding request.
 
 ### Route 1: Hardhat (one command)
 ```bash
 # .env must contain PRIVATE_KEY (owner) and AGENT_ADDRESS (the agent's 0x address)
 npm run deploy:testnet
 ```
-This deploys the registry, a test stable token (mUSD), a demo circle, and your agent vault, sets the agent's limits, funds the vault, and joins you to slot 1. Every step prints its transaction hash, and everything is saved in `deployments/portaldot.json`. Commit that file; the README needs those addresses.
+For a fresh deployment, this deploys the registry, mock mUSD, demo circle and agent vault, sets the agent's limits, funds the vault and joins the owner to UI slot 1. Every submitted transaction is checkpointed in `deployments/<network>.json`; reruns verify and reuse recorded transactions. Keep the recorded keys, configuration and build consistent. The existing `portaldot.json` is already complete.
+
+The successful Windows run set `NODE_OPTIONS=--no-network-family-autoselection --dns-result-order=ipv4first` to avoid intermittent Node connection failures and used `GAS_PRICE_WEI=32040`, close to the then-current node quote. Receipts report an effective gas price of 31880. Obtain a fresh `eth_gasPrice` quote for future transactions; do not reuse a stale fixed price or set a small gas limit to hide storage costs.
 
 If it fails, the script prints a hint:
 
 | Symptom | What to do |
 |---|---|
-| `Invalid Transaction` | Check funding first. Our native dry-run decoded this as `Invalid(Payment)` with the current balance. Switching wallets or tools will not remove storage deposits. |
+| `Invalid Transaction` | Check funding first. Our earlier native dry-run decoded this as `Invalid(Payment)` with the unfunded balance. Switching tools will not remove storage deposits; a different rejection may need separate diagnosis. |
 | `insufficient funds` or a huge gas figure | Run preflight and compare `eth_estimateGas × eth_gasPrice` with the wallet balance. The estimate includes storage deposits; do not force a small gas limit to bypass them. |
 | cannot reach the RPC | Run `npm run preflight`; try another network or VPN. |
-| anything else | Copy the whole error text and send it to me so I can fix the script. |
+| anything else | Record the failing step, public transaction hash and RPC error for diagnosis. Keep keys and `.env` contents private. |
 
 ### Route 2: Remix + MetaMask (the route the official guide uses)
 1. `npm run flatten` writes single-file contracts to `docs/remix/` (they are also committed in the repo).
@@ -112,24 +127,24 @@ If it fails, the script prints a hint:
 npm run web
 # open http://localhost:5173/?registry=<registry address>
 ```
-Connect MetaMask (the owner account), press **Add / switch to Portaldot testnet** if needed, and the circle appears under Circles. Join slots from your owner and demo accounts, pay dues, settle, and set up the vault and agent policy.
+The committed configuration already selects the deployed registry, so the query parameter is optional. Use a fresh browser profile if cached local-demo addresses are selected, or load the registry from the README. Connect MetaMask on Portaldot testnet to act. The deployed owner's slot and vault policy are already set up; join the two remaining slots using other accounts, with mock-token collateral and native gas, before starting the circle.
 
-To run the agent, fill `VAULT`, `OWNER`, `CIRCUITS` (the circle address) and `AGENT_PRIVATE_KEY` in `.env`, make sure the agent address has some gas, then `npm run agent`.
+To run the agent, configure `VAULT`, `OWNER`, `CIRCUITS` (or `REGISTRY`) and `AGENT_PRIVATE_KEY` locally. The deployer checkout already has these values. Estimate the next action's fee, fund the agent as needed and check the policy expiry before `npm run agent`. It polls until Ctrl+C. For local rehearsals, explicitly override the RPC, registry, circle, vault, owner and agent to the demo values so the testnet `.env` is not used.
 
 ## Publish the live app
-After deploying, run `npm run publish:config` to write the addresses into `web/config.js`, commit it, and in GitHub go to Settings, Pages, Source: GitHub Actions. The Pages workflow then serves the dapp read-only for judges.
+The deployment addresses are already generated into `web/config.js` by `npm run publish:config`. Pages is not enabled: its workflow currently fails at `actions/configure-pages` because no Pages site exists. When hosting is desired, enable an eligible Pages site in repository settings and choose GitHub Actions as its source, then rerun the workflow. The repository is currently private; confirm the account's Pages eligibility and intended visibility separately. No hosted-app URL is claimed until publishing succeeds.
 
 ## Step 7: Put the proof in the repo
 
-Paste into the README: contract addresses, the deploy transaction hashes, and explorer links. Then commit and push (separate, meaningful commits are better than one big one). For the DoraHacks check-in (Oct 24, 12:00 UTC) you need: repo link, architecture diagram, contract address, a transaction hash, and a demo video (3 minutes max) or a live link.
+The README now includes all four addresses, the registry transaction and explorer entry point; `deployments/portaldot.json` records every receipt. Preserve this evidence and update the README and generated configuration whenever an intentionally new deployment replaces it. The announced check-in required a repo link, architecture diagram, contract address, transaction hash and a demo video (at most three minutes) or live link. Its October 24 12:00 UTC deadline preceded this deployment; submission status is not inferred from the completed technical work.
 
-## Known quirks to watch for (reported by other builders, not verified by me)
+## Observed behavior and remaining network questions
 
 - Native 14 decimals vs EVM 18 decimals. Do not mix them when reporting balances.
-- `eth_getLogs` may return nothing for calls that went through the native path, so the dapp's "Agent activity" panel can look empty even when the agent has paid. The contract state (spent this period, circle paid flags) is still correct.
-- Gas estimates include storage deposits. Our October 24 native dry-run confirmed a payment failure at the current balance; a smaller gas override also failed.
+- Other builders reported missing `eth_getLogs` results for native-path calls; this remains unverified here. Read the contract's spending counters and circle paid flags alongside logs when investigating activity.
+- Gas estimates include storage deposits. The earlier insufficient-balance rejection and subsequent funded deployment both confirmed the need to budget for them.
 - Pallet-revive can differ from the standard EVM in places. If something behaves unexpectedly on testnet but passes locally, capture the exact error and ask in Office Hours (apply by Oct 27, 12:00 UTC).
 
 ## What has and has not been tested
 
-Local chains: the current 110 Hardhat tests pass; previous browser and local deployment checks are recorded elsewhere. Portaldot RPC reads, contract simulations and a native signed-transaction dry-run were checked on October 24. **No testnet deployment has been accepted**, because the owner needs additional test tokens for fees and storage deposits.
+Local chains: the current 110 Hardhat tests and 45 browser checks pass. On Portaldot, all 12 deployment and setup transactions succeeded and were finalized on October 24. Deployed code, owners, policy, allowlists, vault token funding, circle membership and wallet balances were checked. The demo circle is open with one of three slots filled; a complete multi-member cycle on testnet has not yet run.
