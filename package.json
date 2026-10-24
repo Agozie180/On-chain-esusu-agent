@@ -21,7 +21,8 @@
     "service": "node agent/service.js",
     "demo:local": "node scripts/local-demo.js",
     "demo:buy": "node scripts/buy-report.js",
-    "publish:config": "node scripts/publish-config.js"
+    "publish:config": "node scripts/publish-config.js",
+    "policy:extend": "node scripts/extend-policy.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
