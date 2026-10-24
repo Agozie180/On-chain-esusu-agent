@@ -8,8 +8,9 @@ const fs = require("fs");
 const path = require("path");
 const { ethers } = require("ethers");
 
-const RPC = "http://127.0.0.1:8545";
-const PORT = 5173;
+const RPC_PORT = Number(process.env.ESUSU_E2E_RPC_PORT || 8545);
+const RPC = `http://127.0.0.1:${RPC_PORT}`;
+const PORT = Number(process.env.ESUSU_E2E_WEB_PORT || 5173);
 const WEB = path.join(__dirname, "..", "web");
 const ETHERS = path.join(__dirname, "..", "node_modules", "ethers", "dist", "ethers.umd.min.js");
 const types = { ".html": "text/html", ".js": "text/javascript" };
@@ -24,7 +25,8 @@ async function waitRpc() {
 }
 
 (async () => {
-  const node = spawn("npx", ["hardhat", "node", "--port", "8545"], { env: { ...process.env, SOLC_JS: "1" }, stdio: "ignore" });
+  const node = spawn(process.execPath, [require.resolve("hardhat/internal/cli/cli"), "node", "--hostname", "127.0.0.1", "--port", String(RPC_PORT)], { env: { ...process.env, SOLC_JS: "1" }, stdio: "ignore", windowsHide: true });
+  node.on("error", (error) => { console.error("Local chain failed to start:", error.message); process.exit(1); });
   const LOCAL_CFG = `window.ESUSU_CONFIG = { registry: "", rpc: "${RPC}", chainId: 31337, network: "Hardhat local", symbol: "tPOTv3", explorer: "" };`;
   const srv = http.createServer((req, res) => {
     if (req.url.split("?")[0] === "/config.js") { res.writeHead(200, { "content-type": "text/javascript" }); return res.end(LOCAL_CFG); }
@@ -57,8 +59,9 @@ async function waitRpc() {
     await page.goto(`http://127.0.0.1:${PORT}/`);
 
     const logText = () => page.locator("#log").innerText();
-    const waitLog = async (needle, ms = 30000) => { const t = Date.now(); while (Date.now() - t < ms) { if ((await logText()).includes(needle)) return true; await sleep(300); } return false; };
-    const click = (sel) => page.locator(sel).click();
+    let actionLogBefore = "";
+    const waitLog = async (needle, ms = 30000) => { const t = Date.now(); while (Date.now() - t < ms) { const current = await logText(); if (current.slice(0, Math.max(0, current.length - actionLogBefore.length)).includes(needle)) return true; await sleep(300); } return false; };
+    const click = async (sel) => { actionLogBefore = await logText(); await page.locator(sel).click(); };
 
     await click("#btnConnect"); check("wallet connects", await waitLog("Connected"));
 
@@ -165,9 +168,45 @@ async function waitRpc() {
     check("owner can allow a service provider from the UI", await waitLog("Allow provider ✔"));
     await click("#btnPayeeOff"); check("owner can remove a service provider from the UI", await waitLog("Remove provider ✔"));
 
+    // A valid ERC-20 may return HTML as its symbol. Opening its circle must render text only.
+    const metadataArtifact = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "artifacts/contracts/test/MetadataToken.sol/MetadataToken.json"), "utf8"));
+    const hostileSymbol = `<img src=x onerror="document.body.dataset.esusuXss='executed'">`;
+    const metadataToken = await new ethers.ContractFactory(metadataArtifact.abi, metadataArtifact.bytecode, bob).deploy(hostileSymbol);
+    await metadataToken.waitForDeployment();
+    await page.fill("#cToken", await metadataToken.getAddress());
+    await click("#btnCreate"); check("circle with untrusted token metadata is created", await waitLog("Create circle ✔"));
+    await page.locator("#circleList button[data-open]").first().click();
+    await page.waitForFunction(() => document.querySelector("#circleKv").innerText.includes("Dues per round"));
+    await sleep(1200);
+    check("token metadata never creates HTML elements", await page.locator("#circleKv img, #slots img, #vaultKv img").count() === 0);
+    check("token metadata never executes script", await page.locator("body").getAttribute("data-esusu-xss") === null);
+    check("token symbol is shown as literal text", (await page.locator("#circleKv").innerText()).includes(hostileSymbol));
+
+    // A wallet on another chain must never be allowed to submit a deployment.
+    const wrongChain = await browser.newPage();
+    let wrongChainWrites = 0;
+    await wrongChain.route("**/ethers.umd.min.js", (r) => r.fulfill({ contentType: "text/javascript", body: fs.readFileSync(ETHERS) }));
+    await wrongChain.exposeFunction("__rpc", async (method, params) => {
+      if (method === "eth_chainId") return "0x1";
+      if (method === "eth_requestAccounts" || method === "eth_accounts") return [me];
+      if (method === "eth_sendTransaction" || method === "eth_sendRawTransaction") { wrongChainWrites++; throw new Error("Test intercepted an unsafe write"); }
+      const result = await (await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) })).json();
+      if (result.error) throw new Error(result.error.message);
+      return result.result;
+    });
+    await wrongChain.addInitScript(() => { window.ethereum = { request: ({ method, params }) => window.__rpc(method, params || []), on() {} }; });
+    await wrongChain.goto(`http://127.0.0.1:${PORT}/`);
+    await wrongChain.locator("#btnDeployReg").click();
+    await sleep(1500);
+    check("wrong network cannot submit a deployment", wrongChainWrites === 0);
+    check("wrong network does not enable wallet actions", (await wrongChain.locator("#btnConnect").innerText()) === "Connect wallet");
+    await wrongChain.close();
+
     const errs = (await logText()).split("\n").filter((l) => l.includes("✖"));
     check("no failed actions in the log", errs.length === 0, errs.join(" | "));
     check("no uncaught page errors", pageErrors.length === 0, pageErrors.join(" | "));
+    await page.locator(`#circleList button[data-open="${await circle2.getAddress()}"]`).click();
+    await sleep(1000);
     await page.screenshot({ path: path.join(__dirname, "..", "docs", "dapp-e2e.png"), fullPage: true });
   } catch (e) { console.error("E2E crashed:", e.message); failures++; }
   finally { if (browser) await browser.close(); srv.close(); node.kill(); }

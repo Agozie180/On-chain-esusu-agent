@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-24T20:35:04.266Z",
+  "chainId": 420420777,
+  "owner": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
+  "balance": "499.9",
+  "gasPrice": "31925",
+  "estimates": {
+    "EsusuRegistry": {
+      "gas": "32744937248064908",
+      "upfront": "1045.3821216444721879"
+    },
+    "MockToken": {
+      "gas": "5446187391989830",
+      "upfront": "173.86953248927532275"
+    },
+    "AgentAllowance": {
+      "gas": "15118042319555101",
+      "upfront": "482.643501051796599425"
+    },
+    "EsusuCircle": {
+      "gas": "21729263219290846",
+      "upfront": "693.70672827586025855"
+    }
+  },
+  "registryNativeDryRun": "0x010001",
+  "storageConstants": [
+    {
+      "name": "DepositPerByte",
+      "nativeUnits": "6000000000000"
+    },
+    {
+      "name": "DepositPerItem",
+      "nativeUnits": "15000000000000"
+    },
+    {
+      "name": "DepositPerChildTrieItem",
+      "nativeUnits": "150000000000"
+    }
+  ],
+  "registryNativeDryRunDecoded": "Err(Invalid(Payment))",
+  "registryNativeDryRunMeaning": "The transaction cannot pay fees/storage deposits with the current account balance",
+  "nativeErrorDefinition": "https://github.com/paritytech/polkadot-sdk/blob/master/substrate/primitives/runtime/src/transaction_validity.rs",
+  "ownerNative": "5FZ8pjBgxovYQ59uUecrY9Nuv3tAramyvP8LNPHE54Xk9FXs",
+  "circleEstimateNote": "Standalone circle deployment estimate; registry-created circle and setup costs may differ",
+  "requestedAdditionalTestTokens": "2500",
+  "optimizationExperiment": {
+    "applied": false,
+    "checkedAt": "2026-10-24T20:51:16.581Z",
+    "compiler": "0.8.24+commit.e11b9ed9.Emscripten.clang",
+    "baselineRuntimeBytes": 12912,
+    "smallestRuntimeBytes": 11324,
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 1
+      },
+      "viaIR": true,
+      "metadata": {
+        "appendCBOR": false
+      }
+    },
+    "variant": "via-ir-size-optimized",
+    "gas": "28812438432066102",
+    "upfrontTPOT": "919.40491036722931482",
+    "walletTPOT": "499.9"
+  }
+}

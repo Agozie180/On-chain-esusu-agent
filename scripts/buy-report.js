@@ -8,7 +8,7 @@ const pk = ethers.HDNodeWallet.fromPhrase("test test test test test test test te
 (async () => {
   const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545", 31337, { staticNetwork: true });
   const agent = new ethers.Wallet(pk, provider);
-  const vault = new ethers.Contract(d.vault, ["function payService(address,uint256,bytes32)"], agent);
+  const vault = new ethers.Contract(d.vault, ["function payService(address,uint256,bytes32)", "function token() view returns (address)"], agent);
   const report = await fetchPaid(`${d.serviceUrl}/risk/${d.openCircle}?slot=2`, { vault, maxPrice: 2_000_000n });
   console.log(JSON.stringify(report, null, 2));
 })().catch((e) => { console.error("failed:", e.shortMessage || e.message); process.exit(1); });

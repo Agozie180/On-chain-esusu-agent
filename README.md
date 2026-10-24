@@ -2,7 +2,7 @@
 
 **Ajo, but nobody can run away with the pot. And an AI agent pays your dues without ever being able to steal.**
 
-[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-101%20contract%20%2B%2039%20browser-1f6b4a)
+[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-110%20contract%20%2B%2045%20browser-1f6b4a)
 
 Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: complete and tested on local chains; Portaldot testnet deployment in progress** (see [Status](#status-read-this-first)).
 
@@ -10,7 +10,7 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: compl
 |---|---|
 | **Live app** | _link appears here after the first testnet deploy and Pages setup_ (see [docs/DEPLOY.md](docs/DEPLOY.md)) |
 | **60-second local demo, no wallet or tokens needed** | `npm install && npm run demo:local`, then open http://127.0.0.1:5173 ([judge guide](docs/JUDGES.md)) |
-| **Prove it works** | `npm test` (101 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
+| **Prove it works** | `npm test` (110 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
 
 ![The dapp after a full run in a real browser](docs/dapp-e2e.png)
 
@@ -25,12 +25,12 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: compl
 
 | Piece | State |
 |---|---|
-| 3 contracts (`EsusuCircle`, `EsusuRegistry`, `AgentAllowance`) | Built. 101 tests incl. 40 randomized full circles checking solvency after every transaction. Unaudited. |
+| 3 contracts (`EsusuCircle`, `EsusuRegistry`, `AgentAllowance`) | Built. 110 tests incl. 40 randomized full circles checking solvency after every transaction. Unaudited. |
 | Agent (decision core, auto-discovery, Telegram alerts, risk grader) | Built and tested against a real local chain. |
 | Paid API: agent buys a risk report over HTTP 402 from its capped vault | Built and tested end to end (local). |
-| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 39 checks pass in headless Chromium against a local chain. |
+| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 45 checks pass in headless Chromium against a local chain. |
 | One-command judge demo with seeded circles, a defaulter, a gated circle and a live agent | Built and run end to end. |
-| **Portaldot testnet deployment** | **Not done yet.** Our build sandbox cannot reach Portaldot. Deploy kit, wallet tool and guide are ready: [docs/DEPLOY.md](docs/DEPLOY.md). No testnet addresses are claimed anywhere in this repo until they exist. |
+| **Portaldot testnet deployment** | **Awaiting test tokens.** RPC and chain ID confirmed October 24; native deployment simulation reports insufficient payment. Owner has 499.9 tPOTv3; the registry alone estimates 1045.38 upfront including storage. No deployment accepted. See [diagnostics](deployments/portaldot-preflight.json) and [deployment guide](docs/DEPLOY.md). |
 | Portaldot **WASM / ink!** | **Not used.** Shown honestly as roadmap, not claimed. |
 | Third-party audit | Not done. Self-audit log: [docs/AUDIT.md](docs/AUDIT.md). |
 
@@ -78,10 +78,10 @@ flowchart LR
 
 | Claim | Result | Command |
 |---|---|---|
-| Contracts + agent + service tests | 101 passing (61 + 40 random circles) | `npm test` |
+| Contracts + agent + service tests | 110 passing (70 + 40 random circles) | `npm test` |
 | Random circles (2 to 8 members, native or ERC-20, random fees, defaults, vanishing members): solvency and debtor-safety asserted after every transaction, no stuck funds | 40 passing (`FUZZ_RUNS=500 npm run test:fuzz` for more) | `npm run test:fuzz` |
 | The fuzz suite can fail: breaking collateral pricing fails 31/40, breaking slashing fails 38/40 | Mutation-checked by hand | edit `collateralFor` or the `pot[r] += cut` line |
-| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist | 39 checks | `npm run e2e` |
+| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist, metadata escaping, wrong-network guard | 45 checks | `npm run e2e` |
 | Settlement gas grows linearly: about 0.45M at 12 members, 0.78M at 24 (hence the 30-member cap) | measured | see [AUDIT](docs/AUDIT.md) |
 
 ## Docs
@@ -91,7 +91,7 @@ flowchart LR
 ## Limitations, stated plainly
 
 - **Not audited.** Do not use real funds. Residual design risks (late-slot early defaults, Sybil reputation, first-come slots) are in [docs/AUDIT.md](docs/AUDIT.md).
-- **Nothing has run on Portaldot testnet yet.** Reported chain quirks (inflated gas estimates, raw EVM transactions rejected for one team, native 14 vs EVM 18 decimals, missing logs for native-path calls) are unverified by us and handled with fallbacks in the deploy guide.
+- **No contract has been deployed to Portaldot testnet yet.** RPC reads and deployment simulations were checked on October 24. Native transaction simulation confirms insufficient funding for fees and storage deposits; see the [diagnostics](deployments/portaldot-preflight.json). Native-path log behavior remains unverified.
 - A strike is permanent: a member who misses once forfeits their payout slot even if they keep paying.
 - The risk grade is a transparent heuristic, not a prediction.
 - Only native tokens and well-behaved ERC-20s are supported; fee-on-transfer tokens are rejected (tested).

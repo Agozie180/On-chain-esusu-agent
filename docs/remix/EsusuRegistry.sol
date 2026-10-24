@@ -136,6 +136,67 @@ abstract contract Ownable is Context {
 }
 
 
+// File @openzeppelin/contracts/access/Ownable2Step.sol@v5.0.2
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable2Step.sol)
+
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Contract module which provides access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * The initial owner is specified at deployment time in the constructor for `Ownable`. This
+ * can later be changed with {transferOwnership} and {acceptOwnership}.
+ *
+ * This module is used through inheritance. It will make available all functions
+ * from parent (Ownable).
+ */
+abstract contract Ownable2Step is Ownable {
+    address private _pendingOwner;
+
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Returns the address of the pending owner.
+     */
+    function pendingOwner() public view virtual returns (address) {
+        return _pendingOwner;
+    }
+
+    /**
+     * @dev Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one.
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual override onlyOwner {
+        _pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner(), newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`) and deletes any pending owner.
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual override {
+        delete _pendingOwner;
+        super._transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev The new owner accepts the ownership transfer.
+     */
+    function acceptOwnership() public virtual {
+        address sender = _msgSender();
+        if (pendingOwner() != sender) {
+            revert OwnableUnauthorizedAccount(sender);
+        }
+        _transferOwnership(sender);
+    }
+}
+
+
 // File @openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol@v5.0.2
 
 // Original license: SPDX_License_Identifier: MIT
@@ -688,9 +749,6 @@ abstract contract ReentrancyGuard {
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
-
-
-
 interface IEsusuRegistry {
     function scoreOf(address who) external view returns (uint256);
     function onPaid(address member) external;
@@ -709,12 +767,17 @@ interface IEsusuRegistry {
 ///    remaining obligation is (size - 1 - slot) * dues, which the collateral covers exactly.
 ///    => a member who has been paid can never leave the circle owing it money (invariant I10).
 ///  - A member who misses a round loses `dues` of collateral into that round's pot and is flagged.
-///  - A flagged member forfeits their payout slot; the pot rolls to the next slot.
+///  - STRIKE RULE: a flagged (defaulted) member forfeits their payout slot for good, even if they keep paying later
+///    rounds; the pot rolls to the next slot (last slot: split among members who never defaulted).
 ///  - Payouts and refunds are pull-based. A protocol fee (<= 2%) is taken from payouts only.
 contract EsusuCircle is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum State { Open, Active, Completed }
+
+    /// @dev settleRound loops over every member (~30k gas each, measured: 1.5M gas at 50). Real ajo groups are small;
+    ///      30 keeps settlement cheap even if the target chain prices gas unexpectedly.
+    uint256 public constant MAX_SIZE = 30;
 
     // ---------------------------------------------------------------- config
     address public immutable registry;     // optional (zero = standalone, no reputation)
@@ -772,7 +835,7 @@ contract EsusuCircle is ReentrancyGuard {
         address registry_, address creator_, address token_, uint256 dues_, uint256 size_,
         uint256 roundDuration_, uint256 minScore_, uint16 feeBps_, address treasury_
     ) {
-        if (dues_ == 0 || size_ < 2 || size_ > 50 || roundDuration_ < 60) revert BadConfig();
+        if (dues_ == 0 || size_ < 2 || size_ > MAX_SIZE || roundDuration_ < 60) revert BadConfig();
         if (feeBps_ > 200 || (feeBps_ > 0 && treasury_ == address(0))) revert BadConfig();
         if (minScore_ > 0 && registry_ == address(0)) revert BadConfig();
         registry = registry_;
@@ -980,6 +1043,7 @@ contract EsusuCircle is ReentrancyGuard {
     }
 
     /// @notice Everything the contract owes, for solvency checks: balance must equal this.
+    /// @param extra non-member addresses that may hold credit (treasury, creator). MUST NOT include members (they are counted already).
     function liabilities(address[] calldata extra) external view returns (uint256 total) {
         for (uint256 i = 0; i < size; i++) {
             address m = slotOwner[i];
@@ -995,14 +1059,21 @@ contract EsusuCircle is ReentrancyGuard {
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
-
-
 /// @title EsusuRegistry
 /// @notice Factory + portable reputation for esusu circles.
 ///         Only circles deployed by this registry can write reputation, so a score cannot be
 ///         forged by an arbitrary contract. Any protocol can read `scoreOf(address)`.
-contract EsusuRegistry is Ownable {
+interface ICircleSize {
+    function size() external view returns (uint256);
+}
+
+/// @dev Owner powers are deliberately tiny: set the fee (capped at 2%) and treasury for FUTURE circles. Every circle copies
+///      fee and treasury as immutables at creation, so the owner can never change the terms of an existing circle,
+///      pause it, or touch its funds.
+contract EsusuRegistry is Ownable2Step {
     uint16 public constant MAX_FEE_BPS = 200; // 2%
+    /// @notice Circles smaller than this earn no reputation. Two friends running a 2-person circle should not mint credit.
+    uint256 public constant MIN_REP_SIZE = 3;
 
     struct Rep {
         uint32 completed;   // circles finished without a default
@@ -1057,8 +1128,13 @@ contract EsusuRegistry is Ownable {
         _;
     }
 
+    /// Defaults always count; credit only counts for circles of at least MIN_REP_SIZE members.
+    function _eligible() internal view returns (bool) {
+        return ICircleSize(msg.sender).size() >= MIN_REP_SIZE;
+    }
+
     function onPaid(address member) external onlyCircle {
-        unchecked { _rep[member].paidRounds += 1; }
+        if (_eligible()) { unchecked { _rep[member].paidRounds += 1; } }
     }
 
     function onDefault(address member) external onlyCircle {
@@ -1066,7 +1142,7 @@ contract EsusuRegistry is Ownable {
     }
 
     function onCompleted(address member) external onlyCircle {
-        unchecked { _rep[member].completed += 1; }
+        if (_eligible()) { unchecked { _rep[member].completed += 1; } }
     }
 
     // ----------------------------------------------------------------- views

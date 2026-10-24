@@ -24,8 +24,8 @@ module.exports = {
       url: process.env.PORTALDOT_EVM_RPC || "https://test-evm-rpc-v3.portaldot.dev",
       chainId: 420420777,
       accounts: PK,
-      // Portaldot's eth_estimateGas has been reported to over-estimate wildly. If a deploy fails with
-      // "insufficient funds" or an absurd gas figure, set GAS_LIMIT / GAS_PRICE_WEI in .env (see docs/DEPLOY.md).
+      // Gas includes storage deposits. Check funding with npm run preflight before using overrides;
+      // lowering the gas limit cannot bypass storage costs (see docs/DEPLOY.md).
       ...(process.env.GAS_LIMIT ? { gas: Number(process.env.GAS_LIMIT) } : {}),
       ...(process.env.GAS_PRICE_WEI ? { gasPrice: Number(process.env.GAS_PRICE_WEI) } : {}),
       timeout: 120000,

@@ -80,4 +80,46 @@ describe("Option 2 end to end: the agent pays for an API (HTTP 402) from the cap
     expect(String(err.message)).to.match(/exceeds the agent's own max price/);
     expect(await w.tok.balanceOf(await w.vault.getAddress())).to.equal(before);
   });
+
+  for (const mismatch of ["asset", "chain"]) {
+    it(`refuses a quote for a different ${mismatch} before spending from the vault`, async () => {
+      const before = await w.tok.balanceOf(await w.vault.getAddress());
+      const fetchImpl = async (url, options) => {
+        const response = await fetch(url, options);
+        if (options) return response;
+        const quote = await response.json();
+        if (mismatch === "asset") quote.asset.token = ethers.ZeroAddress;
+        else quote.chainId = 1;
+        return { status: 402, json: async () => quote };
+      };
+      await expect(fetchPaid(w.url, { vault: w.vault, fetchImpl })).to.be.rejectedWith(`quote ${mismatch}`);
+      expect(await w.tok.balanceOf(await w.vault.getAddress())).to.equal(before);
+    });
+  }
+
+  it("redeems one payment at most once when two HTTP requests race", async () => {
+    await w.svc.close();
+    let reads = 0, release;
+    const bothReading = new Promise((resolve) => { release = resolve; });
+    const provider = new Proxy(ethers.provider, {
+      get(target, property) {
+        if (property === "getTransactionReceipt") return async (hash) => {
+          const receipt = await target.getTransactionReceipt(hash);
+          if (++reads === 2) release();
+          await bothReading;
+          return receipt;
+        };
+        const value = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    w.svc = createService({ provider, token: await w.tok.getAddress(), payee: w.svcWallet.address, price: 1_000_000n, chainId: 31337 });
+    const port = await w.svc.listen(0);
+    const url = new URL(w.url); url.port = String(port);
+    const quote = await (await fetch(url)).json();
+    const receipt = await (await w.vault.payService(quote.payee, BigInt(quote.amount), quote.ref)).wait();
+    const options = { headers: { "x-payment-tx": receipt.hash, "x-payment-ref": quote.ref } };
+    const responses = await Promise.all([fetch(url, options), fetch(url, options)]);
+    expect(responses.map((r) => r.status).sort()).to.deep.equal([200, 402]);
+  });
 });

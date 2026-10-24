@@ -1,6 +1,7 @@
 // Create (or inspect) the two testnet keys this project needs, entirely on your own machine.
 //   node scripts/wallet.js            create .env keys if missing, then print addresses
 //   node scripts/wallet.js --show     only print addresses for keys already in .env
+//   node scripts/wallet.js --rotate-agent   replace only the agent key; retain the owner
 // OWNER = deploys contracts, owns the vault. AGENT = hot key that only holds gas and can only call payDues.
 // These are TESTNET keys. Never reuse them anywhere that holds real value.
 const fs = require("fs");
@@ -14,11 +15,13 @@ function set(env, k, v) { return new RegExp(`^${k}=`, "m").test(env) ? env.repla
 
 let env = readEnv();
 const show = process.argv.includes("--show");
+const rotateAgent = process.argv.includes("--rotate-agent");
+if (show && rotateAgent) throw new Error("Use --show or --rotate-agent, not both");
 let created = [];
 
 for (const [key, label] of [["PRIVATE_KEY", "owner"], ["AGENT_PRIVATE_KEY", "agent"]]) {
   let pk = get(env, key);
-  if (!pk && !show) { pk = ethers.Wallet.createRandom().privateKey; env = set(env, key, pk); created.push(label); }
+  if (!show && (!pk || (rotateAgent && label === "agent"))) { pk = ethers.Wallet.createRandom().privateKey; env = set(env, key, pk); created.push(label); }
   if (!pk) { console.log(`${label}: no ${key} in .env (run without --show to create one)`); continue; }
   const w = new ethers.Wallet(pk);
   if (label === "agent") env = set(env, "AGENT_ADDRESS", w.address);

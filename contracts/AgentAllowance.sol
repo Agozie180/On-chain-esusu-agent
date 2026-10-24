@@ -72,6 +72,8 @@ contract AgentAllowance is ReentrancyGuard {
     error OverPayeeCap();
     error InsufficientBalance();
     error TransferFailed();
+    error InvalidOwner();
+    error BadPolicy();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -79,11 +81,13 @@ contract AgentAllowance is ReentrancyGuard {
     }
 
     constructor(address owner_, address token_) {
+        if (owner_ == address(0)) revert InvalidOwner();
         owner = owner_;
         token = token_;
     }
 
     receive() external payable {
+        if (token != address(0)) revert AssetMismatch();
         emit Funded(msg.sender, msg.value);
     }
 
@@ -95,6 +99,7 @@ contract AgentAllowance is ReentrancyGuard {
     function setPolicy(address agent_, uint256 perTxCap_, uint256 periodCap_, uint256 periodLength_, uint256 expiry_)
         external onlyOwner
     {
+        if (agent_ == address(0) || agent_ == owner || periodLength_ == 0) revert BadPolicy();
         agent = agent_;
         perTxCap = perTxCap_;
         periodCap = periodCap_;

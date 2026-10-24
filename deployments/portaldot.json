@@ -1,0 +1,19 @@
+{
+  "network": "portaldot",
+  "chainId": 420420777,
+  "owner": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
+  "agent": "0xe544d4F8D6269D8851B6bEaA86702d81537469d7",
+  "config": {
+    "useToken": true,
+    "dues": "10000000",
+    "size": 3,
+    "duration": 900,
+    "feeBps": 50,
+    "treasury": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
+    "servicePayee": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
+    "agentGas": "100000000000000000"
+  },
+  "tx": {},
+  "receipts": {},
+  "status": "deploying"
+}
