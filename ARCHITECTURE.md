@@ -1,14 +1,16 @@
-# Architecture: implementation blueprint (v2)
+# Architecture: deployed implementation
+
+The registry, circle, test mUSD and agent vault were deployed on Portaldot V3 testnet (chain 420420777) on October 24, 2026. All 12 deployment/setup transactions are finalized. [Addresses and registry transaction](README.md#testnet-deployment-proof) and the [deployment record](deployments/portaldot.json) identify the deployed instances. Validation: 110 contract/agent/service tests and 45 browser checks locally; testnet code, ownership, policy, allowlists and initial balances verified.
 
 ## Thesis (enforced in code)
-**The agent can pay your dues. It can never pay itself, choose the amount, or send money anywhere you have not allowlisted. A paid-out member can never leave the circle in debt.**
+**The agent pays the owner's dues using the amount read from the circle. It can also pay allowlisted service providers within owner-set limits. It cannot withdraw, change those limits or pay itself. A paid-out member's collateral covers their remaining dues.**
 
 ## Contracts
 | Contract | Job |
 |---|---|
 | `EsusuRegistry` | Factory for circles, fee config (cap 2%), reputation ledger writable only by circles it deployed, `scoreOf`, paged circle listing |
 | `EsusuCircle` | One circle: slot-priced collateral, rounds, slashing, forfeited-slot rollover, pull payouts, fee, optional `minScore`, native or ERC-20 |
-| `AgentAllowance` | Per-asset owner vault with an agent key bounded by allowlist, per-tx cap, period cap, expiry, kill switch |
+| `AgentAllowance` | Per-asset owner vault; dues and service-payment lanes share per-payment/period caps, with per-provider caps, allowlists, expiry and a kill switch |
 | `test/MockToken`, `test/Reenterer` | Test-only helpers |
 
 ## Economic design
@@ -20,8 +22,8 @@
 ## Invariants (each pinned by tests)
 | ID | Invariant | Where tested |
 |---|---|---|
-| I1 | Agent never supplies the amount (read from `circle.dues()`) | AgentAllowance tests |
-| I2 | Beneficiary of an agent payment is always the owner | AgentAllowance tests |
+| I1 | For dues, the amount is read from `circle.dues()`; service amounts must satisfy shared and per-provider caps | AgentAllowance tests |
+| I2 | Dues are credited to the owner; service payments go only to allowlisted providers | AgentAllowance tests |
 | I3 | Only allowlisted circles of the same asset can be paid | AgentAllowance tests |
 | I4 | Per-tx and rolling-period caps; kill switch; expiry; fails closed with no policy | AgentAllowance tests |
 | I5 | Agent has no withdraw / policy / pause path | AgentAllowance tests |
@@ -35,10 +37,14 @@
 - `agent/policy.js`: pure `decide()` and `assessCircle()` (the dapp bundles the same code via `scripts/build-web.js`).
 - `agent/agent.js`: polls, acts (`payDues`, `settleRound`), de-duplicated Telegram alerts, optional LLM explanation after the decision.
 - `agent/risk.js`: CLI risk grade for a circle and slot.
+- `agent/pay-client.js` and `agent/service.js`: HTTP 402 quotes bind the asset and chain; the service checks the token transfer and receipt reference and prevents concurrent double redemption.
+
+The deployed demo circle was Open with one of three members at the recorded snapshot. The vault held 50 test mUSD with a 10 mUSD per-payment cap, 30 mUSD per-day shared cap and policy expiry November 7, 2026 at 21:30:06 UTC. The full multi-member cycle and paid API flow are proven locally; they have not yet been exercised end to end on testnet.
 
 ## Priorities (cut from the bottom)
 - **P0 done (local):** contracts, tests, fuzz, agent, dapp, browser e2e.
-- **P0 open:** Portaldot testnet deploy with tx hashes in README; 90s demo video; check-in submission (Oct 24 12:00 UTC).
+- **P0 done (testnet):** deploy and configure the full stack; finalize 12 transactions; record addresses and hashes in README.
+- **P0 open:** demo video and submission; confirm submission status separately from the completed deployment. The October 24 12:00 UTC check-in deadline preceded deployment.
 - **P1:** run the agent as a service during the demo window; pitch deck; real users in a live circle on testnet.
 - **P2:** WASM/ink! integration (see below).
 - **P3:** keeper incentives for `settleRound`, slot auctions, naira-pegged stable support.
@@ -50,17 +56,18 @@ The judging rubric rewards "effective use of WASM/EVM compatibility, modular arc
 No lending/yield. No agent custody. No fiat ramp. No audit or production claim.
 
 ## Demo script (~90s)
-1. Registry + circle on testnet; two members join slots (show different collateral per slot and the risk grade).
+1. Open the deployed registry and circle; two additional members join the remaining slots (show collateral per slot and the risk grade). Estimate wallet and agent gas before rehearsing; see [DEPLOY](docs/DEPLOY.md).
 2. Guardrails first: stranger, non-allowlisted target, agent withdraw, all rejected on-chain.
 3. Agent pays the owner's dues from the vault; a member forgets; deadline passes; agent settles; the defaulter is slashed and flagged; reputation moves.
 4. Owner hits the kill switch; agent alerts instead of paying.
 
 ## Submission checklist
-- [ ] Public repo, at least 3 commits during Oct 14 to Nov 6 (done locally, push needed)
-- [ ] Testnet addresses, tx hashes, explorer links in README
-- [ ] Architecture diagram (Mermaid in README)
+- [x] Code and commit history pushed to GitHub during the hackathon window
+- [ ] Public repository access (repository remains private)
+- [x] Testnet addresses, transaction hashes and explorer entry point in README
+- [x] Architecture diagram (Mermaid in README)
 - [ ] Demo video <= 3 min with a real testnet interaction
-- [ ] DoraHacks check-in by Oct 24 12:00 UTC; final submission by Nov 6 04:00 UTC; pitch deck
+- [ ] Confirm DoraHacks check-in status (October 24 12:00 UTC deadline passed); final submission by November 6 04:00 UTC; pitch deck
 
 ## Update: agent vault lanes and new invariants
 - `AgentAllowance` lane 1 `payDues(circle)` and lane 2 `payService(payee, amount, ref)`; shared per-tx and period caps, per-payee caps, expiry, kill switch; the agent cannot pay itself.

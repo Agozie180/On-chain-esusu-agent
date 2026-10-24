@@ -13,7 +13,115 @@
     "servicePayee": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
     "agentGas": "100000000000000000"
   },
-  "tx": {},
-  "receipts": {},
-  "status": "deploying"
+  "tx": {
+    "registryDeploy": "0xb227a40604be4783d1d0de7d2b47503f952c00158bcc3370b43bb1d03b73734e",
+    "mockTokenDeploy": "0xf1a9ebdf48f2ca61beeeb720c5620fce81b29059a42dbc4524a6bc6c478bed3c",
+    "mintToOwner": "0xf95bfc355f21eb4e83fc6e148c80e4953a0452719e3193026dbd4d1092a6f1b4",
+    "createCircle": "0x05eaa59ce064cec0672788421874f88cb96d87badb38b8c9d4d1fee2570ce247",
+    "vaultDeploy": "0x24dea97cc5ad4cb14475a7fcf60d61258924cb368e3b471f4bf8a4dc247f1299",
+    "setPolicy": "0x5af48f56684f85ad1111ae3ac60876f68d42867dddb81cd6e9da2dbce03f21dc",
+    "allowCircle": "0xe41afe08aa4aea6350c8aa149f68bf52c35292277fe068ca0b33f93668c86da2",
+    "allowServicePayee": "0xd5710536d02e5a77872c16bb25b1fee00da2bf6527d28604cbc13c84e63017e6",
+    "fundVault": "0x3d950bfee5bcd1256f9d6bbe99a5360894efec6cb5b38f32e598acb0d268ebde",
+    "approveCollateral": "0x81116d4e345f884c2d7f8c6aa4f90b01b0b63d9fc2b8c8d0d94c464eb2becb5e",
+    "ownerJoin": "0x5b6b3dba77ec0c21939fcfc88384756fc48f60bb1ca8f836b8a95ba441de2d1d",
+    "fundAgent": "0x1465e8ad254d73b92f0174dd88f5c435e2e14ca668b9faefdd2cab5a76dd050d"
+  },
+  "receipts": {
+    "registryDeploy": {
+      "blockNumber": 179978,
+      "gasUsed": "32286653692824081",
+      "gasPrice": "31880"
+    },
+    "mockTokenDeploy": {
+      "blockNumber": 179979,
+      "gasUsed": "5369944057818862",
+      "gasPrice": "31880"
+    },
+    "mintToOwner": {
+      "blockNumber": 179980,
+      "gasUsed": "241571902744751",
+      "gasPrice": "31880"
+    },
+    "createCircle": {
+      "blockNumber": 179981,
+      "gasUsed": "21756904704189024",
+      "gasPrice": "31880"
+    },
+    "vaultDeploy": {
+      "blockNumber": 179983,
+      "gasUsed": "14906443424680235",
+      "gasPrice": "31880"
+    },
+    "setPolicy": {
+      "blockNumber": 179985,
+      "gasUsed": "844373240743337",
+      "gasPrice": "31880"
+    },
+    "allowCircle": {
+      "blockNumber": 179986,
+      "gasUsed": "121073127888818",
+      "gasPrice": "31880"
+    },
+    "allowServicePayee": {
+      "blockNumber": 179987,
+      "gasUsed": "241672288817389",
+      "gasPrice": "31880"
+    },
+    "fundVault": {
+      "blockNumber": 179989,
+      "gasUsed": "121073163968642",
+      "gasPrice": "31880"
+    },
+    "approveCollateral": {
+      "blockNumber": 179991,
+      "gasUsed": "121073133195108",
+      "gasPrice": "31880"
+    },
+    "ownerJoin": {
+      "blockNumber": 179992,
+      "gasUsed": "482469503727758",
+      "gasPrice": "31880"
+    },
+    "fundAgent": {
+      "blockNumber": 179994,
+      "gasUsed": "3519763079325",
+      "gasPrice": "31880"
+    }
+  },
+  "status": "verified",
+  "registry": "0x317a5d7D429221CcD383fFAb87e81b0D5C12d602",
+  "token": "0x3288B56279A6F299e7B82886e76E7822A3019138",
+  "tokenNote": "testnet mUSD (6 decimals), unrestricted mint: not a real stablecoin",
+  "circleIndex": 0,
+  "circle": "0xeba280DD133D38852b7b58e4ECf4B29BCFaDBd1d",
+  "vault": "0x98017f2275B6758791687e0916cFc4933351482E",
+  "expiry": 1794087006,
+  "servicePayee": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
+  "codeHashes": {
+    "registry": "0xcc55c7ee00e175ca8ac2efa6f9929ac51a4158375833740089eac9fa91530db2",
+    "circle": "0x82f73880e4c13105e78e7d8bee95d274f41b8c7b40f8e096df44dcb7bc111a9f",
+    "vault": "0x40a5f92c1f9fa9d540343d14c27e50f4de14835156e110debc363d8004fd8d94",
+    "token": "0xc276f9d438027fd18b73e340103a627181bec9d149bfd1732e28cff63449efaa"
+  },
+  "verifiedAt": "2026-10-24T21:31:28.325Z",
+  "finalizedAt": "2026-10-24T21:33:46.121Z",
+  "finalizedBlock": 180016,
+  "finalState": {
+    "finalizedBlock": 180016,
+    "transactions": 12,
+    "ownerBalance": "61.0829085227667196",
+    "agentBalance": "0.1",
+    "registryCircles": "1",
+    "circleState": 0,
+    "circleFilled": "1",
+    "ownerJoined": true,
+    "vaultTokens": "50000000",
+    "tokenDecimals": 6,
+    "agent": "0xe544d4F8D6269D8851B6bEaA86702d81537469d7",
+    "periodLength": "86400",
+    "circleAllowed": true,
+    "servicePayeeAllowed": true,
+    "receiptFees": "2438.7170914772332804"
+  }
 }

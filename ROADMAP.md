@@ -1,13 +1,15 @@
 # Roadmap
 
-Honest status first: the protocol, agent and dapp are built and tested locally. Nothing is on Portaldot testnet yet and nothing is audited. Dates after the hackathon are plans, not promises.
+As of October 24, 2026, the protocol, agent and dapp pass 110 contract/agent/service tests and 45 browser checks. The full stack is deployed on Portaldot V3 testnet with 12 finalized setup transactions; see the [proof](README.md#testnet-deployment-proof). A full testnet circle cycle, public hosting and an external audit remain outstanding. Dates after the hackathon are plans, not promises.
 
 ## Phase 0: Hackathon (Oct 14 to Nov 6, 2026)
-- [x] Circle, registry and agent-vault contracts; 101 tests including randomized solvency checks
+- [x] Circle, registry and agent-vault contracts; 110 tests including randomized solvency checks
 - [x] Agent with auto-discovery, alerts, risk grader; paid risk API over HTTP 402
 - [x] Dapp with read-only mode; one-command judge demo; CI and Pages workflows
-- [x] Self-audit rounds 1 and 2 with fixes pinned by tests
-- [ ] Deploy to Portaldot V3 testnet, publish addresses and tx hashes (Oct 24 check-in)
+- [x] Self-audit rounds 1 and 2 plus vault, payment and browser hardening regressions
+- [x] Deploy to Portaldot V3 testnet and record addresses, transaction hashes and finality (October 24)
+- [ ] Fill the remaining two demo-circle slots and complete a testnet cycle
+- [ ] Enable GitHub Pages hosting and public repository access when ready
 - [ ] 3-minute demo video ([script](docs/DEMO_SCRIPT.md))
 - [ ] Office Hours: Portaldot gas/log behavior and the WASM/ink! question
 

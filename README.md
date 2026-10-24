@@ -4,11 +4,11 @@
 
 [![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-110%20contract%20%2B%2045%20browser-1f6b4a)
 
-Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: complete and tested on local chains; Portaldot testnet deployment in progress** (see [Status](#status-read-this-first)).
+Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deployed and verified on Portaldot V3 testnet**, with 12 finalized deployment and setup transactions (see [Status](#status-read-this-first)).
 
 | Try it | How |
 |---|---|
-| **Live app** | _link appears here after the first testnet deploy and Pages setup_ (see [docs/DEPLOY.md](docs/DEPLOY.md)) |
+| **Live app** | Testnet contracts are deployed; Pages hosting still needs configuration. Run `npm run web` locally (see [docs/DEPLOY.md](docs/DEPLOY.md)). |
 | **60-second local demo, no wallet or tokens needed** | `npm install && npm run demo:local`, then open http://127.0.0.1:5173 ([judge guide](docs/JUDGES.md)) |
 | **Prove it works** | `npm test` (110 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
 
@@ -29,10 +29,29 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: compl
 | Agent (decision core, auto-discovery, Telegram alerts, risk grader) | Built and tested against a real local chain. |
 | Paid API: agent buys a risk report over HTTP 402 from its capped vault | Built and tested end to end (local). |
 | Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 45 checks pass in headless Chromium against a local chain. |
-| One-command judge demo with seeded circles, a defaulter, a gated circle and a live agent | Built and run end to end. |
-| **Portaldot testnet deployment** | **Awaiting test tokens.** RPC and chain ID confirmed October 24; native deployment simulation reports insufficient payment. Owner has 499.9 tPOTv3; the registry alone estimates 1045.38 upfront including storage. No deployment accepted. See [diagnostics](deployments/portaldot-preflight.json) and [deployment guide](docs/DEPLOY.md). |
+| One-command judge demo with seeded circles, a defaulter, a gated circle and a live agent | Built and run end to end on a local chain. |
+| **Portaldot testnet deployment** | **Deployed and verified October 24.** Registry, demo mUSD, circle and agent vault have contract code on chain 420420777. All 12 deployment/setup transactions are finalized. See [deployment evidence](deployments/portaldot.json). |
 | Portaldot **WASM / ink!** | **Not used.** Shown honestly as roadmap, not claimed. |
 | Third-party audit | Not done. Self-audit log: [docs/AUDIT.md](docs/AUDIT.md). |
+
+## Testnet deployment proof
+
+Network: **Portaldot V3 Testnet**, chain ID **420420777**. Explorer: https://node-console.portaldot.dev/.
+
+| Contract | Address |
+|---|---|
+| EsusuRegistry | `0x317a5d7D429221CcD383fFAb87e81b0D5C12d602` |
+| MockToken (test mUSD, 6 decimals) | `0x3288B56279A6F299e7B82886e76E7822A3019138` |
+| EsusuCircle | `0xeba280DD133D38852b7b58e4ECf4B29BCFaDBd1d` |
+| AgentAllowance vault | `0x98017f2275B6758791687e0916cFc4933351482E` |
+
+Registry deployment transaction: `0xb227a40604be4783d1d0de7d2b47503f952c00158bcc3370b43bb1d03b73734e`, block **179978**. All transaction hashes, receipts, code hashes and final configuration are recorded in [deployments/portaldot.json](deployments/portaldot.json).
+
+At the **October 24, 2026, 21:33:46 UTC** verification snapshot (finalized block **180016**), the demo circle was Open with **1 of 3 members** joined, 10 mUSD dues and 15-minute rounds. The vault held **50 test mUSD**, its separate agent was configured, and the circle and service payee were allowlisted. The policy expires **November 7, 2026 at 21:30:06 UTC**. A complete multi-member cycle has been tested locally; the testnet circle starts once the other two slots are filled.
+
+The 12 receipts account for **2438.7171 tPOTv3** in fees including storage deposits, plus **0.1 tPOTv3** transferred to the agent. The recorded owner balance after setup was **61.0829 tPOTv3**. The earlier funding blocker is resolved; see the [deployment guide](docs/DEPLOY.md) for the measurements and current usage instructions. Mock mUSD has unrestricted minting and no monetary backing.
+
+To inspect the deployed circle, run `npm install` and `npm run web`, then open http://localhost:5173. The committed configuration selects the testnet registry without requiring a wallet. Repository access currently requires permission, and GitHub Pages hosting remains unconfigured. Use `npm run demo:local` for the separate seeded local rehearsal.
 
 ## How it works
 
@@ -64,15 +83,15 @@ flowchart LR
 |---|---|
 | Pay your dues into circles **you** allowlisted (amount read from the circle, beneficiary always you) | Choose that amount, or pay anyone for you but you |
 | Pay providers **you** allowlisted, within per-payment, per-provider and per-period caps | Pay an address you did not allowlist, or **itself** |
-| Settle finished rounds (anyone can) and alert you early | Withdraw, change limits, un-pause, allowlist anything, or act after expiry |
-| | Worst case if its key is stolen: your own dues pre-paid, plus at most one period's cap to providers you already trust, until you press pause |
+| Settle finished rounds (anyone can) and alert you early | Withdraw, change limits, un-pause, allowlist anything, or make vault payments after expiry |
+| | Worst case if its key is stolen: your own dues pre-paid and payments to trusted providers, bounded by the shared cap in each spending period until paused or expired |
 
 ## What we contribute to the Portaldot ecosystem
 
 1. **A `0x…` → native `5…` address helper**, verified byte-for-byte against the official guide's example ([`lib/portaldot.js`](lib/portaldot.js)). Newcomers need this just to claim test tokens.
 2. **A deploy kit**: local wallet generator, RPC/balance preflight, gas overrides, Remix flatten fallback, and a step-by-step guide for the pitfalls other builders reported ([docs/DEPLOY.md](docs/DEPLOY.md)).
 3. **A reusable on-chain reputation registry** any Portaldot dapp can read with `scoreOf(address)`.
-4. **The bounded-agent vault pattern**, including HTTP 402 payments from an AI agent, as open-source reference code.
+4. **The bounded-agent vault pattern**, including locally demonstrated HTTP 402 payments from an AI agent, as MIT-licensed reference code (repository currently private).
 
 ## Measured (all local, reproducible)
 
@@ -91,7 +110,7 @@ flowchart LR
 ## Limitations, stated plainly
 
 - **Not audited.** Do not use real funds. Residual design risks (late-slot early defaults, Sybil reputation, first-come slots) are in [docs/AUDIT.md](docs/AUDIT.md).
-- **No contract has been deployed to Portaldot testnet yet.** RPC reads and deployment simulations were checked on October 24. Native transaction simulation confirms insufficient funding for fees and storage deposits; see the [diagnostics](deployments/portaldot-preflight.json). Native-path log behavior remains unverified.
+- **Testnet deployment and setup are verified.** The earlier storage-deposit funding blocker was resolved by topping up the owner wallet. The 12 successful receipts are finalized; a complete multi-member cycle on testnet and native-path log behavior remain unverified.
 - A strike is permanent: a member who misses once forfeits their payout slot even if they keep paying.
 - The risk grade is a transparent heuristic, not a prediction.
 - Only native tokens and well-behaved ERC-20s are supported; fee-on-transfer tokens are rejected (tested).

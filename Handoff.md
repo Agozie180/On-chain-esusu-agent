@@ -4,28 +4,37 @@ Project: On-chain Esusu-agent, Portaldot Hacker House 2026. Repo: github.com/Ago
 
 ## State
 Built and tested locally: 110 Hardhat tests, 45 browser checks. Docs complete (README, JUDGES, ROADMAP, GRANTS, BUSINESS, SECURITY, AUDIT rounds 1-2, DEPLOY, DEMO_SCRIPT).
-**Not done:** testnet deploy (insufficient test tokens), demo video, making repo public, Pages setup.
+**Done:** Portaldot V3 deployment and setup, with all 12 transactions finalized. Registry: `0x317a5d7D429221CcD383fFAb87e81b0D5C12d602`. Full proof: `deployments/portaldot.json`. Local `.env` and `web/config.js` now point at the deployment.
 
-## Deployment diagnosis, October 24
+**Not done:** filling the other two demo-circle slots and running a full cycle on testnet, demo video, making repo public, Pages setup.
 
-The RPC is reachable and chain ID 420420777 is confirmed. All 110 current Hardhat tests pass. No deployment was accepted: the owner has confirmed and pending nonce 0, and the checkpoint has no transaction hashes.
+## Successful deployment, October 24
 
-Owner balance: 499.9 tPOTv3. Registry alone estimates 1045.38 tPOTv3 upfront; the registry, mock token, vault and a standalone circle estimate about 2395.60 combined, before setup. The actual registry-created circle and final fees may differ. Native `system_dryRun` of the signed registry deployment returns `0x010001` = `Err(Invalid(Payment))`. Storage deposits are real: runtime `DepositPerByte` is 0.06 tPOTv3. An 8,000,000 gas override fails with `Invalid call: Payment`.
+Owner was topped up to 2499.9 tPOTv3. The existing compiler settings were used. All 12 deployment/setup receipts succeeded and were checked against finalized block 180016. Receipt fees including storage deposits total 2438.7170914772332804 tPOTv3; 0.1 tPOTv3 was sent to the agent; owner balance after setup is 61.0829085227667196 tPOTv3.
 
-Request about 2500 additional tPOTv3 for native owner address `5FZ8pjBgxovYQ59uUecrY9Nuv3tAramyvP8LNPHE54Xk9FXs`, then rerun preflight and deployment. Public diagnostics are in `deployments/portaldot-preflight.json`; private keys remain in `.env`. Do not lower gas to bypass storage costs. Node network access was intermittent; PowerShell HTTP and curl reached the RPC.
+Registry `0x317a5d7D429221CcD383fFAb87e81b0D5C12d602`; token `0x3288B56279A6F299e7B82886e76E7822A3019138`; circle `0xeba280DD133D38852b7b58e4ECf4B29BCFaDBd1d`; vault `0x98017f2275B6758791687e0916cFc4933351482E`. The circle is open, owner joined slot 0, vault contains 50 mUSD, agent policy and allowlists are verified. The separate agent has 0.1 tPOTv3; estimate its transaction fees before running it, as further funding may be needed on this network.
 
-Compiler experiments (not applied) reduced registry runtime code from 12,912 to 11,324 bytes using via-IR, optimizer runs 1 and no CBOR metadata. The smaller registry still estimates 919.40 tPOTv3, above the available balance. Production compiler settings remain unchanged.
+The deployment command used `NODE_OPTIONS=--no-network-family-autoselection --dns-result-order=ipv4first` and `GAS_PRICE_WEI=32040`; receipt gas price was 31880. No manual gas-limit override was used.
+
+## Earlier deployment diagnosis, October 24 (resolved)
+
+Before the successful deployment, RPC and chain ID 420420777 were confirmed and all 110 Hardhat tests passed. At that point no deployment had been accepted: both owner nonces were zero and the checkpoint contained no transaction hashes.
+
+The earlier owner balance was 499.9 tPOTv3. The registry estimated 1045.38 upfront; the four standalone contract estimates totaled about 2395.60 before setup. Native `system_dryRun` returned `0x010001` = `Err(Invalid(Payment))`, and an 8,000,000 gas override also failed. Runtime `DepositPerByte` was 0.06 tPOTv3, so simply lowering the gas limit could not remove the storage requirement.
+
+The owner subsequently received 2000 tPOTv3, bringing the balance to 2499.9 and resolving the blocker. Historical diagnostics remain in [deployments/portaldot-preflight.json](deployments/portaldot-preflight.json); the successful deployment supersedes their earlier funding request. Private keys remain in `.env`. Node access was intermittent; IPv4 options, PowerShell HTTP and curl helped diagnose connectivity.
+
+Compiler experiments (not applied) reduced registry runtime code from 12,912 to 11,324 bytes using via-IR, optimizer runs 1 and no CBOR metadata. The smaller registry estimated 919.40 tPOTv3, above the earlier balance. The actual deployment retained the existing compiler settings.
 
 ## Next steps (your machine)
-1. `npm install && npm run wallet && npm run wallet:show`; get tPOTv3 for the 5... addresses (Discord ticket or admins, see docs/DEPLOY.md)
-2. `npm run preflight && npm run deploy:testnet` (or the Remix route)
-3. `npm run publish:config`, commit, push; set Pages source to GitHub Actions
-4. Make repo public; put addresses and tx hashes in README
-5. Record the demo ([script](docs/DEMO_SCRIPT.md)); submit by Oct 24 12:00 UTC check-in
-6. Apply for Office Hours by Oct 27 12:00 UTC (gas/logs, WASM question)
+1. `npm run web` opens the dapp against the deployed registry; join the two remaining demo-circle slots using separate wallets.
+2. Estimate agent gas for its first live action and top up as needed, then run the cycle and record the demo ([script](docs/DEMO_SCRIPT.md)).
+3. Enable Pages with GitHub Actions when hosting is desired. The current workflow fails because no Pages site is configured; the repository remains private.
+4. Make the repository public if desired; addresses and the registry transaction hash are already in README.
+5. Apply for Office Hours by Oct 27 12:00 UTC (gas/logs, WASM question).
 
 ## Deadlines
-Check-in Oct 24 12:00 UTC; Office Hours Oct 27 12:00 UTC; code freeze Nov 6 04:00 UTC. Need at least 3 commits in the window.
+The October 24 12:00 UTC check-in deadline preceded deployment; submission status is unverified. Upcoming announced deadlines: Office Hours October 27 12:00 UTC; code freeze November 6 04:00 UTC. Commit history has been pushed; keep public-access and submission readiness separate from code/deployment completion.
 
 ## Commit rule
 Author Agozie180 only, no Co-Authored-By or Claude trailers.
