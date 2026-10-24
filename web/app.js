@@ -29,17 +29,32 @@
   // ------------------------------------------------------------ wallet
   async function connect() {
     if (!window.ethereum) { log("No wallet found. Install MetaMask or another EVM wallet."); return false; }
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner(); me = await signer.getAddress();
-    reg = bind(reg); circle = bind(circle); vault = bind(vault); token = bind(token);
-    $("btnConnect").textContent = short(me);
-    $("modeBanner").textContent = "Wallet connected: you can act.";
-    const net = await provider.getNetwork();
-    log(Number(net.chainId) === Number(CFG.chainId) ? `Connected to ${CFG.network} as ${me}` : `Connected to chain ${net.chainId}, expected ${CFG.chainId}. Use "Add Portaldot testnet".`);
-    return true;
+    try {
+      const candidate = new ethers.BrowserProvider(window.ethereum);
+      await candidate.send("eth_requestAccounts", []);
+      const net = await candidate.getNetwork();
+      if (Number(net.chainId) !== Number(CFG.chainId)) {
+        log(`Wallet is on chain ${net.chainId}, expected ${CFG.chainId}. Use "Add ${CFG.network}" before acting.`);
+        return false;
+      }
+      const nextSigner = await candidate.getSigner();
+      provider = candidate; signer = nextSigner; me = await signer.getAddress();
+      reg = bind(reg); circle = bind(circle); vault = bind(vault); token = bind(token);
+      $("btnConnect").textContent = short(me);
+      $("modeBanner").textContent = "Wallet connected: you can act.";
+      log(`Connected to ${CFG.network} as ${me}`);
+      await refresh();
+      return true;
+    } catch (e) { log("Wallet connection failed: " + errName(e)); return false; }
   }
-  const ensure = async () => (signer ? true : connect());
+  const ensure = async () => {
+    if (!signer) return connect();
+    try {
+      if (Number((await provider.getNetwork()).chainId) === Number(CFG.chainId)) return true;
+    } catch {}
+    log(`Switch your wallet to ${CFG.network} before acting.`);
+    return false;
+  };
   async function switchNet() {
     if (!window.ethereum) return log("No wallet found.");
     try { await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN.chainId }] }); }
@@ -115,13 +130,13 @@
       ["State", STATES[s]], ["Joined", `${filled}/${n}`], ["Dues per round", fmt(dues)], ["Round", s === 2 ? "done" : `${Number(round) + 1} of ${n}`],
       ["Deadline", s !== 1 ? "—" : left > 0 ? `${Math.floor(left / 60)}m ${left % 60}s left` : "passed: settle now"],
       ["Reputation needed", Number(minScore) ? `${minScore} (yours: ${myScore})` : "open"], ["Protocol fee", Number(feeBps) / 100 + "%"], ["My withdrawable", fmt(myCredit)],
-    ].map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join("");
+    ].map(([k, v]) => `<div><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join("");
 
     const mySlot = isMember ? Number(await circle.slotOf(me)) : -1;
     $("slots").innerHTML = slotInfo.map((x) => {
       const cls = x.taken ? "slot" : "slot free" + (selectedSlot === x.i ? " sel" : "");
       const who = x.taken ? (x.a === me ? "<b>you</b>" : short(x.a)) : "open";
-      const extra = x.taken ? ` · score ${x.score}` : ` · locks ${fmt(x.col)}`;
+      const extra = x.taken ? ` · score ${x.score}` : ` · locks ${esc(fmt(x.col))}`;
       const flag = x.def ? ` <span class="tag bad">defaulted</span>` : "";
       return `<div class="${cls}" data-slot="${x.i}">Slot ${x.i + 1}${s === 1 && x.i === Number(round) ? " ← paid now" : ""}<br>${who}${extra}${flag}</div>`;
     }).join("");
@@ -174,13 +189,13 @@
     $("vaultKv").innerHTML = [["Vault balance", fmt(bal)], ["Owner", owner === me ? "you" : short(owner)], ["Agent key", agent === ZERO ? "not set" : short(agent)],
       ["Max per payment", fmt(perTx)], ["Max per period", fmt(periodCap)], ["Spent this period", fmt(spent)], ["Period", Number(periodLen) / 3600 + " h"],
       ["Agent expires", Number(expiry) ? new Date(Number(expiry) * 1000).toLocaleString() : "not set"], ["Agent status", paused ? "PAUSED" : "active"],
-      ["This circle allowlisted", allowed ? "yes" : "no"]].map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join("");
+      ["This circle allowlisted", allowed ? "yes" : "no"]].map(([k, v]) => `<div><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join("");
     $("vaultView").style.display = "block";
     $("btnPause").disabled = paused; $("btnUnpause").disabled = !paused;
     try {
       const head = await provider.getBlockNumber();
       const evs = await vault.queryFilter(vault.filters.AgentPaid(), Math.max(0, head - 5000));
-      $("activity").innerHTML = evs.length ? evs.slice(-8).reverse().map((e) => `${short(e.args.circuit)} paid ${fmt(e.args.amount)} · tx ${short(e.transactionHash)}`).join("<br>") : "No agent payments yet.";
+      $("activity").innerHTML = evs.length ? evs.slice(-8).reverse().map((e) => `${short(e.args.circuit)} paid ${esc(fmt(e.args.amount))} · tx ${short(e.transactionHash)}`).join("<br>") : "No agent payments yet.";
     } catch { $("activity").textContent = "Activity unavailable (RPC log range limit)."; }
   }
 
@@ -219,6 +234,7 @@
 
     $("btnLoadVault").onclick = () => loadVault($("vaultAddr").value.trim());
     $("btnDeployVault").onclick = async () => { if (!circle) return log("Open a circle first.");
+      if (!(await ensure())) return;
       await run("Deploy vault", async () => {
         const f = new ethers.ContractFactory(ESUSU.vault.abi, ESUSU.vault.bytecode, signer);
         const v = await f.deploy(me, token ? await token.getAddress() : ZERO); log("tx " + v.deploymentTransaction().hash); await v.waitForDeployment(); await loadVault(await v.getAddress());

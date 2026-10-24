@@ -59,6 +59,8 @@ function createService({ provider, token, payee, price, chainId, symbol = "mUSD"
       if (usedTx.has(tx)) return send(402, { error: "payment already redeemed" });
       const bad = await verify(tx, ref);
       if (bad) return send(402, { error: bad });
+      // Receipt verification yields to other requests. Recheck and claim synchronously.
+      if (usedTx.has(tx) || !issued.has(ref)) return send(402, { error: "payment already redeemed" });
       usedTx.add(tx); issued.delete(ref);
       return send(200, await buildReport(provider, m[1], u.searchParams.get("slot") ?? undefined));
     } catch (e) { return send(500, { error: e.message }); }

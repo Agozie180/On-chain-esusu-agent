@@ -12,7 +12,7 @@
     "web": "node scripts/build-web.js && npx --yes http-server web -p 5173 -c-1",
     "test:fuzz": "hardhat test test/fuzz.test.js",
     "demo": "hardhat run scripts/demo.js",
-    "e2e": "node scripts/e2e-browser.js",
+    "e2e": "hardhat compile && node scripts/build-web.js && node scripts/e2e-browser.js",
     "risk": "node agent/risk.js",
     "wallet": "node scripts/wallet.js",
     "wallet:show": "node scripts/wallet.js --show",

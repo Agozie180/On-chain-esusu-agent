@@ -6,6 +6,9 @@ async function fetchPaid(url, { vault, maxPrice, fetchImpl = fetch }) {
   if (first.status !== 402) return first.json();
   const q = await first.json();
   if (!q.payee || !q.amount || !q.ref) throw new Error("402 response without a payment quote: " + JSON.stringify(q));
+  const [token, network] = await Promise.all([vault.token(), vault.runner.provider.getNetwork()]);
+  if (q.asset?.token?.toLowerCase() !== token.toLowerCase()) throw new Error("quote asset does not match the vault; not paying");
+  if (String(q.chainId) !== network.chainId.toString()) throw new Error("quote chain does not match the vault; not paying");
   const amount = BigInt(q.amount);
   if (maxPrice !== undefined && amount > BigInt(maxPrice)) throw new Error(`quote ${amount} exceeds the agent's own max price ${maxPrice}; not paying`);
   const rc = await (await vault.payService(q.payee, amount, q.ref)).wait();

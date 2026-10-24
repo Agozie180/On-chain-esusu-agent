@@ -1,7 +1,7 @@
 // One-command judge demo: a local chain with realistic seeded state, the dapp, and the paid risk API.
 //   npm run demo:local          (add SOLC_JS=1 in an offline sandbox)
 // No faucet, no testnet, no deploy risk. Press Ctrl+C to stop.
-const { spawn, execSync } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -17,8 +17,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const types = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png" };
 
 async function main() {
-  execSync("npx hardhat compile", { stdio: "ignore", env: process.env });
-  const node = spawn("npx", ["hardhat", "node", "--port", "8545"], { stdio: "ignore", env: process.env });
+  const cli = require.resolve("hardhat/internal/cli/cli");
+  execFileSync(process.execPath, [cli, "compile"], { stdio: "inherit", env: process.env, windowsHide: true });
+  execFileSync(process.execPath, [path.join(__dirname, "build-web.js")], { stdio: "inherit", windowsHide: true });
+  const node = spawn(process.execPath, [cli, "node", "--hostname", "127.0.0.1", "--port", "8545"], { stdio: "ignore", env: process.env, windowsHide: true });
+  node.on("error", (error) => { console.error("Local chain failed to start:", error.message); process.exit(1); });
   const cleanup = () => { try { node.kill(); } catch {} process.exit(0); };
   process.on("SIGINT", cleanup); process.on("SIGTERM", cleanup);
   const provider = new ethers.JsonRpcProvider(RPC, 31337, { staticNetwork: true });

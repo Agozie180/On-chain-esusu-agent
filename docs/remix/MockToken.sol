@@ -632,7 +632,6 @@ abstract contract ERC20 is Context, IERC20, IERC20Metadata, IERC20Errors {
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
-
 /// Test-only stable-value token (6 decimals like USDT/USDC).
 contract MockToken is ERC20 {
     constructor() ERC20("Mock Dollar", "mUSD") {}

@@ -74,6 +74,10 @@ It confirms the RPC answers, the chain id is `420420777`, and the owner has a no
 
 ## Step 5: Deploy
 
+### Confirmed funding requirement (October 24, 2026)
+
+The owner wallet has 499.9 tPOTv3, but the registry deployment estimates 1045.38 tPOTv3 upfront. Native `system_dryRun` confirms `Invalid(Payment)`. Portaldot charges storage deposits; `DepositPerByte` is 0.06 tPOTv3. Reducing the gas limit to 8,000,000 fails with `Invalid call: Payment` and does not bypass these costs. The four contract estimates total about 2395.60 before setup, with the circle estimated as a standalone deployment. Request approximately 2500 additional test tokens, then rerun `npm run preflight` and deploy. See `deployments/portaldot-preflight.json` for the observed values.
+
 ### Route 1: Hardhat (one command)
 ```bash
 # .env must contain PRIVATE_KEY (owner) and AGENT_ADDRESS (the agent's 0x address)
@@ -85,8 +89,8 @@ If it fails, the script prints a hint:
 
 | Symptom | What to do |
 |---|---|
-| `Invalid Transaction` | One team reported the node rejecting raw signed transactions from external wallets, while the official guide deploys through Remix and MetaMask. Use Route 2. |
-| `insufficient funds` or a huge gas figure | Portaldot's `eth_estimateGas` has been reported as heavily inflated. Set `GAS_LIMIT` (try `8000000`) and `GAS_PRICE_WEI` (the value MetaMask shows or `eth_gasPrice` returns) in `.env`, then retry. |
+| `Invalid Transaction` | Check funding first. Our native dry-run decoded this as `Invalid(Payment)` with the current balance. Switching wallets or tools will not remove storage deposits. |
+| `insufficient funds` or a huge gas figure | Run preflight and compare `eth_estimateGas × eth_gasPrice` with the wallet balance. The estimate includes storage deposits; do not force a small gas limit to bypass them. |
 | cannot reach the RPC | Run `npm run preflight`; try another network or VPN. |
 | anything else | Copy the whole error text and send it to me so I can fix the script. |
 
@@ -123,9 +127,9 @@ Paste into the README: contract addresses, the deploy transaction hashes, and ex
 
 - Native 14 decimals vs EVM 18 decimals. Do not mix them when reporting balances.
 - `eth_getLogs` may return nothing for calls that went through the native path, so the dapp's "Agent activity" panel can look empty even when the agent has paid. The contract state (spent this period, circle paid flags) is still correct.
-- Gas estimates can be wildly high; use the `GAS_LIMIT` override rather than a bigger balance.
+- Gas estimates include storage deposits. Our October 24 native dry-run confirmed a payment failure at the current balance; a smaller gas override also failed.
 - Pallet-revive can differ from the standard EVM in places. If something behaves unexpectedly on testnet but passes locally, capture the exact error and ask in Office Hours (apply by Oct 27, 12:00 UTC).
 
 ## What has and has not been tested
 
-Local chains: all tests, the browser end-to-end run and the deploy script pass. **Nothing has been run against Portaldot testnet yet**, because the build sandbox cannot reach it. The first real deploy may need the gas overrides or the Remix route.
+Local chains: the current 110 Hardhat tests pass; previous browser and local deployment checks are recorded elsewhere. Portaldot RPC reads, contract simulations and a native signed-transaction dry-run were checked on October 24. **No testnet deployment has been accepted**, because the owner needs additional test tokens for fees and storage deposits.

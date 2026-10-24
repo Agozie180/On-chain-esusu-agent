@@ -2,6 +2,7 @@
 // Confirms the RPC answers, the chain id is right, and the owner wallet has gas.
 require("dotenv").config();
 const { ethers } = require("ethers");
+const fs = require("fs");
 const { h160ToSs58, NETWORK } = require("../lib/portaldot");
 
 (async () => {
@@ -25,6 +26,26 @@ const { h160ToSs58, NETWORK } = require("../lib/portaldot");
     const ab = await provider.getBalance(process.env.AGENT_ADDRESS);
     out(ab > 0n, `agent balance ${ethers.formatEther(ab)} (the agent needs a little gas to call payDues and settleRound)`);
   }
-  try { const fee = await provider.getFeeData(); console.log(`gasPrice ${fee.gasPrice}`); } catch {}
+  try {
+    const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+    console.log(`gasPrice ${gasPrice}`);
+    const checkpoint = fs.existsSync("deployments/portaldot.json")
+      ? JSON.parse(fs.readFileSync("deployments/portaldot.json", "utf8")) : null;
+    if (!checkpoint?.tx?.registryDeploy) {
+      const artifactPath = "artifacts/contracts/EsusuRegistry.sol/EsusuRegistry.json";
+      if (!fs.existsSync(artifactPath)) throw new Error("Run npm run compile before checking deployment funding");
+      const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+      const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode);
+      const tx = await factory.getDeployTransaction(w.address, process.env.TREASURY || w.address, Number(process.env.FEE_BPS ?? 50));
+      // Pallet-revive includes storage deposits in gas. A small manual gas limit cannot remove them.
+      const gas = BigInt(await provider.send("eth_estimateGas", [{ from: w.address, data: tx.data, gasPrice: ethers.toQuantity(gasPrice) }]));
+      const required = gas * gasPrice;
+      out(bal >= required, `registry alone needs approximately ${ethers.formatEther(required)} tPOTv3 upfront (fees and storage deposits)`);
+      if (bal < required) {
+        bad++;
+        console.log(`     -> registry funding shortfall: ${ethers.formatEther(required - bal)} tPOTv3; the token, circle, vault and setup need additional funding`);
+      }
+    } else console.log("Registry transaction already recorded; use deploy:testnet to resume and verify it.");
+  } catch (e) { out(false, `cannot verify deployment funding: ${e.shortMessage || e.message}`); bad++; }
   process.exit(bad ? 1 : 0);
-})();
+})().catch((e) => { console.error(`Preflight failed: ${e.shortMessage || e.message}`); process.exit(1); });
