@@ -29,7 +29,7 @@ Compiler experiments (not applied) reduced registry runtime code from 12,912 to 
 ## Next steps (your machine)
 1. `npm run web` opens the dapp against the deployed registry; join the two remaining demo-circle slots using separate wallets.
 2. Estimate agent gas for its first live action and top up as needed, then run the cycle and record the demo ([script](docs/DEMO_SCRIPT.md)).
-3. Enable Pages with GitHub Actions when hosting is desired. The current workflow fails because no Pages site is configured; the repository remains private.
+3. Pages: make the repo public, set Pages source to GitHub Actions, add repository variable PAGES_ENABLED=true, then run the Pages workflow (steps in docs/DEPLOY.md). Until then the job is skipped; the earlier red failure was "Pages site not found" (private repo, Pages not enabled).
 4. Make the repository public if desired; addresses and the registry transaction hash are already in README.
 5. Apply for Office Hours by Oct 27 12:00 UTC (gas/logs, WASM question).
 

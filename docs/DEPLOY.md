@@ -132,7 +132,14 @@ The committed configuration already selects the deployed registry, so the query 
 To run the agent, configure `VAULT`, `OWNER`, `CIRCUITS` (or `REGISTRY`) and `AGENT_PRIVATE_KEY` locally. The deployer checkout already has these values. Estimate the next action's fee, fund the agent as needed and check the policy expiry before `npm run agent`. It polls until Ctrl+C. For local rehearsals, explicitly override the RPC, registry, circle, vault, owner and agent to the demo values so the testnet `.env` is not used.
 
 ## Publish the live app
-The deployment addresses are already generated into `web/config.js` by `npm run publish:config`. Pages is not enabled: its workflow currently fails at `actions/configure-pages` because no Pages site exists. When hosting is desired, enable an eligible Pages site in repository settings and choose GitHub Actions as its source, then rerun the workflow. The repository is currently private; confirm the account's Pages eligibility and intended visibility separately. No hosted-app URL is claimed until publishing succeeds.
+The deployment addresses are already generated into `web/config.js` by `npm run publish:config`. The Pages workflow failed with "Get Pages site failed ... Not Found" because no Pages site exists, and GitHub Pages is not available on private repositories on the free plan. To publish the live app, do these in order:
+
+1. Make the repository public (Settings, General, Danger Zone, Change visibility).
+2. Settings, Pages, Build and deployment, Source: **GitHub Actions**.
+3. Settings, Secrets and variables, Actions, Variables, New repository variable: `PAGES_ENABLED` = `true`.
+4. Actions tab, Pages workflow, Run workflow.
+
+Until step 3 the workflow is skipped rather than failing. No hosted-app URL is claimed until a run succeeds.
 
 ## Step 7: Put the proof in the repo
 

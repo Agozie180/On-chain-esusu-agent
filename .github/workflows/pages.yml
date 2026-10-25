@@ -1,4 +1,9 @@
-# Publishes web/ as the live dapp. One-time setup: repo Settings > Pages > Source: "GitHub Actions".
+# Publishes web/ as the live dapp.
+# One-time setup (3 steps, in this order):
+#   1. Repo must be PUBLIC (GitHub Pages is not available on private repos on the free plan).
+#   2. Settings > Pages > Build and deployment > Source: "GitHub Actions".
+#   3. Settings > Secrets and variables > Actions > Variables > New variable: PAGES_ENABLED = true
+# Until step 3 the job is skipped instead of failing red (a failed Pages job: "Get Pages site failed ... Not Found" means 1 or 2 is missing).
 name: Pages
 on:
   push:
@@ -14,6 +19,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   deploy:
+    if: ${{ vars.PAGES_ENABLED == 'true' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
