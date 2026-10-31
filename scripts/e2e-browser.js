@@ -13,7 +13,7 @@ const RPC = `http://127.0.0.1:${RPC_PORT}`;
 const PORT = Number(process.env.ESUSU_E2E_WEB_PORT || 5173);
 const WEB = path.join(__dirname, "..", "web");
 const ETHERS = path.join(__dirname, "..", "node_modules", "ethers", "dist", "ethers.umd.min.js");
-const types = { ".html": "text/html", ".js": "text/javascript" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let failures = 0;
@@ -45,7 +45,7 @@ async function waitRpc() {
     const sandboxChrome = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
     const executablePath = process.env.CHROMIUM_PATH || (fs.existsSync(sandboxChrome) ? sandboxChrome : undefined); // else Playwright's own install (CI)
     browser = await chromium.launch({ executablePath, args: ["--no-sandbox"] });
-    const page = await browser.newPage();
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const pageErrors = [];
     page.on("pageerror", (e) => pageErrors.push(e.message));
     await page.route("**/ethers.umd.min.js", (r) => r.fulfill({ contentType: "text/javascript", body: fs.readFileSync(ETHERS) }));
@@ -65,6 +65,7 @@ async function waitRpc() {
 
     await click("#btnConnect"); check("wallet connects", await waitLog("Connected"));
 
+    await page.locator("#registrySettings summary").click();
     await click("#btnDeployReg"); check("registry deploys from the UI", await waitLog("Deploy registry ✔") && /^0x/.test(await page.inputValue("#regAddr")));
     await page.waitForSelector("#discover", { state: "visible" });
     check("registry panel shows reputation 0 / 1000", (await page.locator("#regKv").innerText()).includes("0 / 1000"));
@@ -78,7 +79,10 @@ async function waitRpc() {
     await page.waitForSelector("#circleCard", { state: "visible" });
 
     check("join is disabled until a slot is selected", await page.locator("#btnJoin").isDisabled());
-    await page.locator(".slot.free").first().click();
+    await page.locator(".slot.free").first().focus();
+    await page.keyboard.press("Enter");
+    await page.locator('.slot.free[aria-pressed="true"]').waitFor({ state: "visible" });
+    check("payout slots are keyboard accessible", await page.locator(".slot.free").first().getAttribute("aria-pressed") === "true");
     await page.waitForFunction(() => document.querySelector("#risk").innerText.includes("Risk grade"), null, { timeout: 15000 }).catch(() => {});
     check("risk grade appears for the selected slot", (await page.locator("#risk").innerText()).includes("Risk grade"), await page.locator("#risk").innerText());
     await click("#btnJoin"); check("join succeeds", await waitLog("Join slot 1 ✔"));
@@ -142,7 +146,7 @@ async function waitRpc() {
 
     // ---- read-only mode: no wallet at all, the live circles must still render for a judge who just opens the link
     const regAddr = await page.inputValue("#regAddr");
-    const ro = await browser.newPage();
+    const ro = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const roErrors = [];
     ro.on("pageerror", (e) => roErrors.push(e.message));
     await ro.route("**/ethers.umd.min.js", (r) => r.fulfill({ contentType: "text/javascript", body: fs.readFileSync(ETHERS) }));
@@ -155,12 +159,35 @@ async function waitRpc() {
     await ro.goto(`http://127.0.0.1:${PORT}/?registry=${regAddr}`);
     await ro.waitForSelector("#circleList button[data-open]", { timeout: 20000 }).catch(() => {});
     check("read-only: circles are listed with no wallet", (await ro.locator("#circleList").innerText()).includes("joined"), await ro.locator("#circleList").innerText());
-    check("read-only: hero explains the product", (await ro.locator(".hero").innerText()).includes("nobody can run away with the pot"));
+    check("read-only: hero explains the product", (await ro.locator(".hero").innerText()).includes("choose your payout slot"));
     check("read-only: reputation prompts to connect instead of showing a fake zero", (await ro.locator("#regKv").innerText()).includes("connect wallet"));
     await ro.locator("#circleList button[data-open]").first().click();
     await ro.waitForSelector("#circleCard", { state: "visible", timeout: 15000 }).catch(() => {});
     check("read-only: a circle opens and shows its slots", (await ro.locator("#slots").innerText()).includes("Slot 1"));
     check("read-only: acting asks for a wallet instead of crashing", await (async () => { await ro.locator("#btnSettle").click({ force: true }).catch(() => {}); await sleep(800); return !roErrors.length; })(), roErrors.join(" | "));
+    // Loading a configured demo circle should keep the landing page at the top.
+    await ro.route("**/config.js", async (route) => route.fulfill({ contentType: "text/javascript", body:
+      `window.ESUSU_CONFIG = ${JSON.stringify({ registry: regAddr, demoCircle: await circle2.getAddress(), rpc: RPC, chainId: 31337, network: "Hardhat local", symbol: "tPOTv3", explorer: "" })};`
+    }));
+    await ro.goto(`http://127.0.0.1:${PORT}/`);
+    await ro.locator("#slots .slot").first().waitFor({ state: "visible" });
+    check("read-only: demo loading does not scroll away from the landing page", await ro.evaluate(() => scrollY === 0));
+    // Inspect the actual read-only layout, with data from the local chain.
+    await ro.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await ro.evaluate(() => document.fonts.ready);
+    await ro.screenshot({ path: path.join(__dirname, "..", "docs", "dapp-desktop.png"), fullPage: false });
+    await ro.screenshot({ path: path.join(__dirname, "..", "docs", "dapp-e2e.png"), fullPage: true });
+    await ro.setViewportSize({ width: 390, height: 844 });
+    await ro.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    check("mobile: page has no horizontal overflow", await ro.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    check("mobile: wallet and navigation remain accessible", await ro.locator("#btnConnect").isVisible() && await ro.locator('.main-nav a[href="#discover"]').isVisible());
+    await ro.screenshot({ path: path.join(__dirname, "..", "docs", "dapp-mobile.png"), fullPage: true });
+    await ro.locator('.main-nav a[href="#discover"]').click();
+    check("mobile: circle navigation selects its section", await ro.locator('.main-nav a[href="#discover"]').getAttribute("aria-current") === "location");
+    await ro.route(RPC + "/**", (route) => route.abort("failed"));
+    await ro.reload();
+    await ro.locator('#syncStatus[data-state="error"]').waitFor({ state: "visible", timeout: 20000 });
+    check("read-only: RPC failure has a clear recovery state", (await ro.locator("#circleList").innerText()).includes("couldn’t reach the network") && await ro.locator("#btnConnect").isVisible());
     await ro.close();
 
     // ---- service-provider lane controls in the vault panel
@@ -196,6 +223,7 @@ async function waitRpc() {
     });
     await wrongChain.addInitScript(() => { window.ethereum = { request: ({ method, params }) => window.__rpc(method, params || []), on() {} }; });
     await wrongChain.goto(`http://127.0.0.1:${PORT}/`);
+    await wrongChain.locator("#registrySettings summary").click();
     await wrongChain.locator("#btnDeployReg").click();
     await sleep(1500);
     check("wrong network cannot submit a deployment", wrongChainWrites === 0);
@@ -207,7 +235,6 @@ async function waitRpc() {
     check("no uncaught page errors", pageErrors.length === 0, pageErrors.join(" | "));
     await page.locator(`#circleList button[data-open="${await circle2.getAddress()}"]`).click();
     await sleep(1000);
-    await page.screenshot({ path: path.join(__dirname, "..", "docs", "dapp-e2e.png"), fullPage: true });
   } catch (e) { console.error("E2E crashed:", e.message); failures++; }
   finally { if (browser) await browser.close(); srv.close(); node.kill(); }
   console.log(failures ? `\n${failures} check(s) FAILED` : "\nAll browser checks passed");

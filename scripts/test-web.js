@@ -17,7 +17,8 @@ async function main() {
       if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404); return res.end();
       }
-      res.setHeader("Content-Type", file.endsWith(".html") ? "text/html" : "text/javascript");
+      const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2", ".svg": "image/svg+xml" };
+      res.setHeader("Content-Type", types[path.extname(file)] || "application/octet-stream");
       res.end(fs.readFileSync(file));
     });
     await new Promise((resolve, reject) => {
@@ -37,6 +38,17 @@ async function main() {
     };
     const html = await get("/", 200, /text\/html/);
     assert.match(html, /id="btnConnect"/, "the homepage must be the dapp");
+    const stylesheets = [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)].map((match) => match[1]);
+    assert(stylesheets.length > 0, "the app must load its stylesheet");
+    for (const href of stylesheets) {
+      const css = await get(href, 200, /text\/css/);
+      for (const match of css.matchAll(/url\("([^"]+\.woff2)"\)/g)) {
+        const font = await fetch(new URL(match[1], new URL(href, base)), { signal: AbortSignal.timeout(30000) });
+        assert.equal(font.status, 200, match[1] + ": missing font");
+        const signature = new TextDecoder().decode((await font.arrayBuffer()).slice(0, 4));
+        assert.equal(signature, "wOF2", match[1] + ": invalid font");
+      }
+    }
     const scripts = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)]
       .map((match) => match[1]).filter((src) => new URL(src, base).origin === new URL(base).origin);
     assert(scripts.length > 0, "the homepage must reference its local scripts");

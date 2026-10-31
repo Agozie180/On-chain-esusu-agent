@@ -1,4 +1,4 @@
-/* On-chain Esusu-agent dapp v2. No build step. Needs an EVM wallet (e.g. MetaMask). */
+/* Esusu savings workspace. Public reads work without a wallet; writes require an EVM wallet. */
 (() => {
   const CFG = Object.assign({ registry: "", rpc: "https://test-evm-rpc-v3.portaldot.dev", chainId: 420420777, network: "PortaldotV3 Testnet", symbol: "tPOTv3",
     explorer: "https://node-console.portaldot.dev/" }, window.ESUSU_CONFIG || {});
@@ -12,7 +12,9 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   let provider, signer = null, me = ethers.ZeroAddress, reg, circle, vault, token;
-  const readProvider = new ethers.JsonRpcProvider(CFG.rpc, Number(CFG.chainId), { staticNetwork: true });
+  const rpcRequest = new ethers.FetchRequest(CFG.rpc);
+  rpcRequest.timeout = 15000;
+  const readProvider = new ethers.JsonRpcProvider(rpcRequest, Number(CFG.chainId), { staticNetwork: true });
   provider = readProvider;
   let asset = { native: true, symbol: CFG.symbol, decimals: 18 };
   const bind = (c) => (c ? c.connect(signer || provider) : c);
@@ -21,7 +23,17 @@
   const fmt = (w) => { const s = ethers.formatUnits(w, asset.decimals); return (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s) + " " + asset.symbol; };
   const units = (id) => ethers.parseUnits($(id).value.trim() || "0", asset.decimals);
   const errName = (e) => (String(e?.message || "").match(/custom error '([^']+)'/) || [])[1] || e?.revert?.name || e?.shortMessage || e?.reason || e?.message || String(e);
-  function log(msg) { const el = $("log"); el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + el.textContent; }
+  let noticeTimer;
+  function log(msg) {
+    const el = $("log"); el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + el.textContent;
+    if (!/^(tx |Refresh failed:)/.test(msg)) {
+      $("notice").textContent = msg; $("notice").hidden = false;
+      clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { $("notice").hidden = true; }, 6500);
+    }
+  }
+  function networkStatus(state, message) {
+    $("syncStatus").dataset.state = state; $("syncStatus").textContent = message;
+  }
 
   async function run(label, fn) { try { log(label + "…"); const r = await fn(); log(label + " ✔"); return r; } catch (e) { log(`${label} ✖ ${errName(e)}`); } }
   async function send(label, getTx) { if (!(await ensure())) return; return run(label, async () => { const tx = await getTx(); log("tx " + tx.hash); await tx.wait(); await refresh(); }); }
@@ -41,7 +53,7 @@
       provider = candidate; signer = nextSigner; me = await signer.getAddress();
       reg = bind(reg); circle = bind(circle); vault = bind(vault); token = bind(token);
       $("btnConnect").textContent = short(me);
-      $("modeBanner").textContent = "Wallet connected: you can act.";
+      $("modeBanner").textContent = "Wallet connected. Your circle and vault actions are ready.";
       log(`Connected to ${CFG.network} as ${me}`);
       await refresh();
       return true;
@@ -75,27 +87,35 @@
     const mine = signer ? `${score} / 1000` : "connect wallet";
     $("regKv").style.display = "grid";
     $("regKv").innerHTML = [["Circles", count], ["Protocol fee", Number(fee) / 100 + "%"], ["My reputation", mine],
-      ["My history", signer ? `${rep.completed} done · ${rep.paidRounds} paid · ${rep.defaults} missed` : "-"]].map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join("");
+      ["My history", signer ? `${rep.completed} done · ${rep.paidRounds} paid · ${rep.defaults} missed` : "Connect to see your history"]].map(([k, v]) => `<div><b>${k}</b><span${!signer && k === "My reputation" ? ' class="stat-prompt"' : ""}>${v}</span></div>`).join("");
+    $("navCount").textContent = count; $("circleCount").textContent = count;
     $("discover").style.display = "block";
     const addrs = await reg.circlesPage(count > 20n ? count - 20n : 0n, 20n);
     const rows = [];
-    for (const a of [...addrs].reverse()) {
+    for (const [index, a] of [...addrs].reverse().entries()) {
       const c = new ethers.Contract(a, ESUSU.circle.abi, provider);
-      const [st, size, filled, dues, tk, minScore] = await Promise.all([c.state(), c.size(), c.filled(), c.dues(), c.token(), c.minScore()]);
+      const [st, size, filled, dues, tk, minScore, duration] = await Promise.all([c.state(), c.size(), c.filled(), c.dues(), c.token(), c.minScore(), c.roundDuration()]);
       const sym = tk === ZERO ? "tPOTv3" : await tokenSymbol(tk);
       const dec = tk === ZERO ? 18 : await tokenDecimals(tk);
-      rows.push(`<li><span>${short(a)} · ${ethers.formatUnits(dues, dec).replace(/\.0$/, "")} ${esc(sym)} × ${size} · ${filled}/${size} joined${minScore > 0n ? " · min score " + minScore : ""}</span>
-        <span><span class="tag ${Number(st) === 0 ? "wait" : Number(st) === 1 ? "ok" : ""}">${STATES[Number(st)]}</span> <button data-open="${a}">Open</button></span></li>`);
+      const number = String(count - BigInt(index)).padStart(2, "0");
+      const seconds = Number(duration);
+      const cadence = seconds < 3600 ? `${seconds / 60} min` : seconds < 86400 ? `${seconds / 3600} hr` : `${seconds / 86400} day`;
+      rows.push(`<li class="circle-row">
+        <div class="circle-identity"><span class="circle-avatar" aria-hidden="true"></span><span><strong>Circle ${number}</strong><span class="circle-address">${short(a)}</span></span></div>
+        <div class="circle-amount">${ethers.formatUnits(dues, dec).replace(/\.0$/, "")} ${esc(sym)}<small>${cadence} rounds${minScore > 0n ? " · min score " + minScore : ""}</small></div>
+        <div class="circle-members">${filled}/${size} joined<span class="member-track" aria-hidden="true"><span style="width:${Number(filled) / Number(size) * 100}%"></span></span></div>
+        <div class="circle-row-actions"><span class="tag ${Number(st) === 0 ? "wait" : Number(st) === 1 ? "ok" : ""}">${["Open", "Active", "Completed"][Number(st)]}</span><button class="circle-open" data-open="${a}" aria-label="Open circle ${number}">Open <span aria-hidden="true">↗</span></button></div></li>`);
     }
-    $("circleList").innerHTML = rows.join("") || `<li class="small">No circles yet. Create the first one below.</li>`;
-    $("circleList").querySelectorAll("button[data-open]").forEach((b) => (b.onclick = () => loadCircle(b.dataset.open)));
+    $("circleList").innerHTML = rows.join("") || `<li class="empty-state"><span class="empty-mark" aria-hidden="true">○</span><div><strong>A fresh start</strong><p>No circles here yet. Set the terms and start the first one below.</p></div></li>`;
+    networkStatus("live", "Connected to " + CFG.network);
+    $("circleList").querySelectorAll("button[data-open]").forEach((b) => (b.onclick = () => loadCircle(b.dataset.open).catch((e) => log("Could not open circle: " + errName(e)))));
   }
   const symCache = {}, decCache = {};
   async function tokenSymbol(a) { if (!symCache[a]) { try { symCache[a] = await new ethers.Contract(a, ESUSU.erc20, provider).symbol(); } catch { symCache[a] = "TOKEN"; } } return symCache[a]; }
   async function tokenDecimals(a) { if (decCache[a] === undefined) { try { decCache[a] = Number(await new ethers.Contract(a, ESUSU.erc20, provider).decimals()); } catch { decCache[a] = 18; } } return decCache[a]; }
 
   // ------------------------------------------------------------ circle
-  async function loadCircle(addr) {
+  async function loadCircle(addr, { scroll = true } = {}) {
     circle = new ethers.Contract(addr, ESUSU.circle.abi, signer || provider);
     store.set("esusu.circle", addr); selectedSlot = null;
     const tk = await circle.token();
@@ -105,7 +125,7 @@
     const saved = store.get("esusu.vault." + tk);
     if (saved) $("vaultAddr").value = saved; else $("vaultAddr").value = "";
     await refresh();
-    $("circleCard").scrollIntoView({ behavior: "smooth" });
+    if (scroll) $("circleCard").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   async function renderCircle() {
@@ -135,10 +155,11 @@
     const mySlot = isMember ? Number(await circle.slotOf(me)) : -1;
     $("slots").innerHTML = slotInfo.map((x) => {
       const cls = x.taken ? "slot" : "slot free" + (selectedSlot === x.i ? " sel" : "");
-      const who = x.taken ? (x.a === me ? "<b>you</b>" : short(x.a)) : "open";
-      const extra = x.taken ? ` · score ${x.score}` : ` · locks ${esc(fmt(x.col))}`;
+      const who = x.taken ? (x.a === me ? "<b>you</b>" : short(x.a)) : "Available";
+      const extra = x.taken ? `Reputation ${x.score}` : `Locks ${esc(fmt(x.col))}`;
       const flag = x.def ? ` <span class="tag bad">defaulted</span>` : "";
-      return `<div class="${cls}" data-slot="${x.i}">Slot ${x.i + 1}${s === 1 && x.i === Number(round) ? " ← paid now" : ""}<br>${who}${extra}${flag}</div>`;
+      const content = `<span class="slot-number">Slot ${x.i + 1}</span><span class="slot-meta">${who}${s === 1 && x.i === Number(round) ? " · paid now" : ""}</span><span class="slot-meta">${extra}</span>${flag}`;
+      return x.taken ? `<div class="${cls}">${content}</div>` : `<button type="button" class="${cls}" data-slot="${x.i}" aria-pressed="${selectedSlot === x.i}">${content}</button>`;
     }).join("");
     $("slots").querySelectorAll(".slot.free").forEach((el) => (el.onclick = () => { selectedSlot = Number(el.dataset.slot); renderCircle(); }));
 
@@ -154,7 +175,7 @@
       return `<li><span>Slot ${x.i + 1} · ${x.a === me ? "<b>you</b>" : short(x.a)} · score ${x.score}</span>${tag}</li>`;
     }).join("");
 
-    $("circleCard").style.display = "block"; $("vaultCard").style.display = "block";
+    $("circleCard").style.display = "block"; $("vaultCard").style.display = "block"; $("vaultEmpty").hidden = true;
     $("btnJoin").disabled = s !== 0 || isMember || selectedSlot === null;
     $("btnLeave").disabled = s !== 0 || !isMember;
     $("btnPay").disabled = s !== 1 || !isMember;
@@ -199,10 +220,24 @@
     } catch { $("activity").textContent = "Activity unavailable (RPC log range limit)."; }
   }
 
-  async function refresh() { try { await renderRegistry(); await renderCircle(); await renderVault(); } catch (e) { log("Refresh failed: " + errName(e)); } }
+  async function refresh() {
+    try { await renderRegistry(); await renderCircle(); await renderVault(); }
+    catch (e) {
+      networkStatus("error", "Network unavailable · retrying");
+      if (!$("circleList").querySelector("[data-open]")) {
+        $("circleList").innerHTML = '<li class="empty-state"><span class="empty-mark" aria-hidden="true">↻</span><div><strong>We couldn’t reach the network</strong><p>Your funds are unaffected. We’ll retry automatically; you can also check the network settings below.</p></div></li>';
+      }
+      log("Refresh failed: " + errName(e));
+    }
+  }
 
   // ------------------------------------------------------------ actions
   function wire() {
+    document.querySelectorAll(".main-nav .nav-link").forEach((link) => link.addEventListener("click", () => {
+      document.querySelectorAll(".main-nav .nav-link").forEach((item) => { item.classList.remove("active"); item.removeAttribute("aria-current"); });
+      link.classList.add("active"); link.setAttribute("aria-current", "location");
+      document.querySelector(".breadcrumb strong").textContent = { "#overview": "Overview", "#discover": "Circles", "#agentSection": "Agent vault", "#sessionSection": "Activity" }[link.getAttribute("href")];
+    }));
     $("btnConnect").onclick = connect; $("btnNet").onclick = switchNet; $("btnNet").textContent = "Add " + CFG.network;
     $("btnLoadReg").onclick = () => loadRegistry($("regAddr").value.trim());
     $("btnDeployReg").onclick = async () => { if (!(await ensure())) return;
@@ -255,7 +290,10 @@
     $("regAddr").value = q.get("registry") || CFG.registry || store.get("esusu.registry") || "";
     if ($("regAddr").value && ethers.isAddress($("regAddr").value)) {
       loadRegistry($("regAddr").value).catch((e) => log("Could not read the chain without a wallet (" + errName(e) + "). Connect a wallet to continue."));
-      if (CFG.demoCircle && !q.get("registry")) loadCircle(CFG.demoCircle).catch(() => {});
+      if (CFG.demoCircle && !q.get("registry")) loadCircle(CFG.demoCircle, { scroll: false }).catch((e) => log("Could not open the demo circle: " + errName(e)));
+    } else {
+      networkStatus("idle", "Choose a registry to get started");
+      $("circleList").innerHTML = '<li class="empty-state"><span class="empty-mark" aria-hidden="true">○</span><div><strong>Choose your registry</strong><p>Open network settings below to load a registry or create your own.</p></div></li>';
     }
     if (window.ethereum?.on) { window.ethereum.on("accountsChanged", () => location.reload()); window.ethereum.on("chainChanged", () => location.reload()); }
     setInterval(() => { if (circle || reg) refresh(); }, 20000);

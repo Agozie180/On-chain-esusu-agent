@@ -2,7 +2,7 @@
 
 **Ajo, but nobody can run away with the pot. And an AI agent pays your dues without ever being able to steal.**
 
-[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-110%20contract%20%2B%2045%20browser-1f6b4a)
+[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-110%20contract%20%2B%2051%20browser-1f6b4a)
 
 Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deployed and verified on Portaldot V3 testnet**, with 12 finalized deployment and setup transactions (see [Status](#status-read-this-first)).
 
@@ -12,7 +12,9 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deplo
 | **60-second local demo, no wallet or tokens needed** | `npm install && npm run demo:local`, then open http://127.0.0.1:5173 ([judge guide](docs/JUDGES.md)) |
 | **Prove it works** | `npm test` (110 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
 
-![The dapp after a full run in a real browser](docs/dapp-e2e.png)
+![Esusu desktop workspace, rendered against a local test chain](docs/dapp-desktop.png)
+
+[Full workspace](docs/dapp-e2e.png) · [Mobile layout](docs/dapp-mobile.png)
 
 ## Understand it in 10 seconds
 
@@ -28,7 +30,7 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deplo
 | 3 contracts (`EsusuCircle`, `EsusuRegistry`, `AgentAllowance`) | Built. 110 tests incl. 40 randomized full circles checking solvency after every transaction. Unaudited. |
 | Agent (decision core, auto-discovery, Telegram alerts, risk grader) | Built and tested against a real local chain. |
 | Paid API: agent buys a risk report over HTTP 402 from its capped vault | Built and tested end to end (local). |
-| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 45 checks pass in headless Chromium against a local chain. |
+| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 51 checks pass in headless Chromium against a local chain. |
 | One-command judge demo with seeded circles, a defaulter, a gated circle and a live agent | Built and run end to end on a local chain. |
 | **Portaldot testnet deployment** | **Deployed and verified October 24.** Registry, demo mUSD, circle and agent vault have contract code on chain 420420777. All 12 deployment/setup transactions are finalized. See [deployment evidence](deployments/portaldot.json). |
 | Portaldot **WASM / ink!** | **Not used.** Shown honestly as roadmap, not claimed. |
@@ -100,7 +102,7 @@ flowchart LR
 | Contracts + agent + service tests | 110 passing (70 + 40 random circles) | `npm test` |
 | Random circles (2 to 8 members, native or ERC-20, random fees, defaults, vanishing members): solvency and debtor-safety asserted after every transaction, no stuck funds | 40 passing (`FUZZ_RUNS=500 npm run test:fuzz` for more) | `npm run test:fuzz` |
 | The fuzz suite can fail: breaking collateral pricing fails 31/40, breaking slashing fails 38/40 | Mutation-checked by hand | edit `collateralFor` or the `pot[r] += cut` line |
-| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist, metadata escaping, wrong-network guard | 45 checks | `npm run e2e` |
+| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist, metadata escaping, wrong-network guard | 51 checks | `npm run e2e` |
 | Settlement gas grows linearly: about 0.45M at 12 members, 0.78M at 24 (hence the 30-member cap) | measured | see [AUDIT](docs/AUDIT.md) |
 
 ## Docs

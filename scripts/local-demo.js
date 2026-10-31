@@ -14,7 +14,7 @@ const MNEMONIC = "test test test test test test test test test test test junk"; 
 const key = (i) => ethers.HDNodeWallet.fromPhrase(MNEMONIC, undefined, `m/44'/60'/0'/0/${i}`).privateKey;
 const art = (n, sub = "") => JSON.parse(fs.readFileSync(path.join(__dirname, "..", `artifacts/contracts/${sub}${n}.sol/${n}.json`), "utf8"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const types = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png" };
 
 async function main() {
   const cli = require.resolve("hardhat/internal/cli/cli");
