@@ -132,14 +132,35 @@ The committed configuration already selects the deployed registry, so the query 
 To run the agent, configure `VAULT`, `OWNER`, `CIRCUITS` (or `REGISTRY`) and `AGENT_PRIVATE_KEY` locally. The deployer checkout already has these values. Estimate the next action's fee, fund the agent as needed and check the policy expiry before `npm run agent`. It polls until Ctrl+C. For local rehearsals, explicitly override the RPC, registry, circle, vault, owner and agent to the demo values so the testnet `.env` is not used.
 
 ## Publish the live app
-The deployment addresses are already generated into `web/config.js` by `npm run publish:config`. The Pages workflow failed with "Get Pages site failed ... Not Found" because no Pages site exists, and GitHub Pages is not available on private repositories on the free plan. To publish the live app, do these in order:
+
+### Vercel (primary host)
+
+The production URL is https://onchainesusuagent.vercel.app. Import the repository with **Root Directory `.`** and **Framework Preset Other**. The root `vercel.json` defines the remaining settings:
+
+| Setting | Value |
+|---|---|
+| Install Command | `npm ci --include=dev` |
+| Build Command | `npm run build` |
+| Output Directory | `web` |
+
+The build compiles the contracts, generates the browser ABIs/bytecode and shared risk grader, and publishes the public testnet configuration from `deployments/portaldot.json`. It needs no wallet keys and sends no transactions. `artifacts/` is ignored by Git, so a fresh deployment must compile before generating `web/contracts.js`. Only `web/` is served; the agent, paid API and local blockchain are separate processes and are not Vercel functions.
+
+Push to the connected production branch (`main`) to deploy, or run `vercel deploy --prod --project onchainesusuagent` from the repository root. For a local build check, run `npm ci --include=dev && npm run build`.
+
+**October 31 hosting diagnosis:** the live root returned HTTP 404 with `X-Vercel-Error: NOT_FOUND`, even though Vercel reported the deployment as Ready. The project used the default output directory (`.`), while `index.html` lives in `web/`, and no default `build` script existed. The explicit output directory and build command fix this mismatch. A 504 would be a separate timeout; the homepage is static and does not wait for the Portaldot RPC to respond.
+
+Run `npm run test:web` to check the configured output locally, or `npm run test:web -- https://onchainesusuagent.vercel.app` after deployment. This checks the root page, its scripts and generated configuration, and confirms repository source files are not served. The homepage should display even without a wallet; chain connectivity is checked separately in the browser.
+
+### GitHub Pages (optional)
+
+The Pages workflow failed with "Get Pages site failed ... Not Found" because no Pages site exists, and GitHub Pages is not available on private repositories on the free plan. To publish there as well, do these in order:
 
 1. Make the repository public (Settings, General, Danger Zone, Change visibility).
 2. Settings, Pages, Build and deployment, Source: **GitHub Actions**.
 3. Settings, Secrets and variables, Actions, Variables, New repository variable: `PAGES_ENABLED` = `true`.
 4. Actions tab, Pages workflow, Run workflow.
 
-Until step 3 the workflow is skipped rather than failing. No hosted-app URL is claimed until a run succeeds.
+Until step 3 the workflow is skipped. These steps are only needed for GitHub Pages; Vercel hosting does not depend on them.
 
 ## Step 7: Put the proof in the repo
 

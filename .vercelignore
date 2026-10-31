@@ -1,0 +1,10 @@
+.env
+.env.*
+.agent-state.json
+.local-demo.json
+deployments/hardhat.json
+deployments/localhost.json
+node_modules/
+artifacts/
+cache/
+*.log

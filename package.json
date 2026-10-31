@@ -4,8 +4,10 @@
   "description": "On-chain Esusu-agent: rotating savings circles on Portaldot with a policy-bounded AI agent that pays your dues.",
   "license": "MIT",
   "scripts": {
+    "build": "hardhat compile && npm run build:web && npm run publish:config",
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:web": "node scripts/test-web.js",
     "deploy:testnet": "hardhat run scripts/deploy.js --network portaldot",
     "agent": "node agent/agent.js",
     "build:web": "node scripts/build-web.js",

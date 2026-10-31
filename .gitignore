@@ -7,3 +7,4 @@ cache/
 deployments/hardhat.json
 deployments/localhost.json
 .local-demo.json
+.vercel/

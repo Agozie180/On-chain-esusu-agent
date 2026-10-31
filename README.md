@@ -8,7 +8,7 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deplo
 
 | Try it | How |
 |---|---|
-| **Live app** | Testnet contracts are deployed; Pages hosting still needs configuration. Run `npm run web` locally (see [docs/DEPLOY.md](docs/DEPLOY.md)). |
+| **Live app** | [Open the dapp on Vercel](https://onchainesusuagent.vercel.app) or run `npm run web` locally (see [docs/DEPLOY.md](docs/DEPLOY.md)). |
 | **60-second local demo, no wallet or tokens needed** | `npm install && npm run demo:local`, then open http://127.0.0.1:5173 ([judge guide](docs/JUDGES.md)) |
 | **Prove it works** | `npm test` (110 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
 
@@ -51,7 +51,7 @@ At the **October 24, 2026, 21:33:46 UTC** verification snapshot (finalized block
 
 The 12 receipts account for **2438.7171 tPOTv3** in fees including storage deposits, plus **0.1 tPOTv3** transferred to the agent. The recorded owner balance after setup was **61.0829 tPOTv3**. The earlier funding blocker is resolved; see the [deployment guide](docs/DEPLOY.md) for the measurements and current usage instructions. Mock mUSD has unrestricted minting and no monetary backing.
 
-To inspect the deployed circle, run `npm install` and `npm run web`, then open http://localhost:5173. The committed configuration selects the testnet registry without requiring a wallet. Repository access currently requires permission, and GitHub Pages hosting remains unconfigured. Use `npm run demo:local` for the separate seeded local rehearsal.
+To inspect the deployed circle, open https://onchainesusuagent.vercel.app, or run `npm install` and `npm run web`, then open http://localhost:5173. The committed configuration selects the testnet registry without requiring a wallet. Vercel builds from the repository root and serves `web/`; GitHub Pages is an optional separate host. Use `npm run demo:local` for the separate seeded local rehearsal.
 
 ## How it works
 

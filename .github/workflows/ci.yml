@@ -21,7 +21,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npx hardhat compile && node scripts/build-web.js
+      - run: npm run build
+      - name: Static deployment output smoke test
+        run: npm run test:web
       - run: npx playwright-core install --with-deps chromium
       - name: Real-browser end-to-end test of the dapp
         run: node scripts/e2e-browser.js

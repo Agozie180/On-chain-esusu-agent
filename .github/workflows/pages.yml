@@ -8,7 +8,7 @@ name: Pages
 on:
   push:
     branches: [main]
-    paths: ["web/**", "contracts/**", "agent/policy.js", "scripts/build-web.js", "package.json", "package-lock.json", "hardhat.config.js", ".github/workflows/pages.yml"]
+    paths: ["web/**", "contracts/**", "agent/policy.js", "scripts/build-web.js", "scripts/publish-config.js", "deployments/portaldot.json", "package.json", "package-lock.json", "hardhat.config.js", ".github/workflows/pages.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npx hardhat compile && npm run build:web
+      - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: web }
