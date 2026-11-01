@@ -39,7 +39,7 @@ The registry, circle, test mUSD and agent vault were deployed on Portaldot V3 te
 - `agent/risk.js`: CLI risk grade for a circle and slot.
 - `agent/pay-client.js` and `agent/service.js`: HTTP 402 quotes bind the asset and chain; the service checks the token transfer and receipt reference and prevents concurrent double redemption.
 
-The deployed demo circle was Open with one of three members at the recorded snapshot. The vault held 50 test mUSD with a 10 mUSD per-payment cap, 30 mUSD per-day shared cap and policy expiry November 7, 2026 at 21:30:06 UTC. The full multi-member cycle and paid API flow are proven locally; they have not yet been exercised end to end on testnet.
+The deployed demo circle was Open with one of three members at the recorded snapshot. The vault held 50 test mUSD with a 10 mUSD per-payment cap and 30 mUSD per-day shared cap. The owner renewed the policy on November 1 for 30 days, until December 1, 2026 at 15:37:18 UTC, keeping those limits unchanged; see `policyRenewal` in the [deployment record](deployments/portaldot.json). The full multi-member cycle and paid API flow are proven locally; they have not yet been exercised end to end on testnet.
 
 ## Priorities (cut from the bottom)
 - **P0 done (local):** contracts, tests, fuzz, agent, dapp, browser e2e.

@@ -1,6 +1,6 @@
 # On-chain Esusu-agent
 
-**Ajo, but nobody can run away with the pot. And an AI agent pays your dues without ever being able to steal.**
+**For Nigerian ajo groups and cooperatives: save together, take turns receiving the pot, and let an agent pay your dues within limits you control.**
 
 [![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-110%20contract%20%2B%2051%20browser-1f6b4a)
 
@@ -18,10 +18,11 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deplo
 
 ## Understand it in 10 seconds
 
-- **The problem.** Esusu / ajo circles (everyone pays in, one member takes the pot each round) are how many Nigerians save. They run on trust and a WhatsApp group, and they break when someone takes the pot and disappears. Digital versions can't rely on community shame once members are strangers ([e-MFP](https://www.e-mfp.eu/blog/when-fintech-meets-traditional-informal-financial-schemes-recent-trends-innovations-digitising)).
-- **The fix.** The circle's rules live on-chain. Whoever is paid early locks more collateral, so **a paid-out member can never leave the circle in debt**. A missed payment is covered by collateral, the member takes a strike, and a **portable reputation score** (usable by any app) updates.
-- **The twist.** Your **AI agent pays your dues on time** from a vault you fund. It can only pay circles and service providers **you** allowlisted, inside limits **you** set, and it can **never withdraw or pay itself**. You can kill it in one transaction.
-- **Why Portaldot.** Solidity contracts on Portaldot V3's EVM, with a native `5…` / `0x…` address toolkit and a Remix + Hardhat deploy path we built and documented for other teams.
+- **Who:** Nigerian friend-and-family ajo/esusu groups, and cooperatives that organize them.
+- **Problem:** missed contributions and members who stop paying after receiving the pot.
+- **Product:** a shared savings circle on Portaldot with a fixed payout order, collateral for missed dues, and an agent that automates contributions within owner-set limits.
+
+Earlier payout slots require more collateral to cover the member's remaining dues. The agent can only pay approved circles and providers; it cannot withdraw from the vault. Late-slot defaults can still reduce later pots, so this is not a guarantee against every loss. [How the safeguards work](docs/AUDIT.md).
 
 ## Status (read this first)
 
@@ -49,7 +50,9 @@ Network: **Portaldot V3 Testnet**, chain ID **420420777**. Explorer: https://nod
 
 Registry deployment transaction: `0xb227a40604be4783d1d0de7d2b47503f952c00158bcc3370b43bb1d03b73734e`, block **179978**. All transaction hashes, receipts, code hashes and final configuration are recorded in [deployments/portaldot.json](deployments/portaldot.json).
 
-At the **October 24, 2026, 21:33:46 UTC** verification snapshot (finalized block **180016**), the demo circle was Open with **1 of 3 members** joined, 10 mUSD dues and 15-minute rounds. The vault held **50 test mUSD**, its separate agent was configured, and the circle and service payee were allowlisted. The policy expires **November 7, 2026 at 21:30:06 UTC**. A complete multi-member cycle has been tested locally; the testnet circle starts once the other two slots are filled.
+At the **October 24, 2026, 21:33:46 UTC** verification snapshot (finalized block **180016**), the demo circle was Open with **1 of 3 members** joined, 10 mUSD dues and 15-minute rounds. The vault held **50 test mUSD**, its separate agent was configured, and the circle and service payee were allowlisted. A complete multi-member cycle has been tested locally; the testnet circle starts once the other two slots are filled.
+
+**Judge testing window:** the owner renewed the agent policy on **November 1** for 30 days, until **December 1, 2026 at 15:37:18 UTC (16:37:18 Lagos)**. The 10 mUSD per-payment and 30 mUSD daily limits are unchanged. Renewal transaction: `0xb4c9cc7d34bd5fbdaa09255b0094613ddccedca0d8715210e599b8aafaa9b71b`, confirmed in block **279265**; receipt and policy values are in the [deployment record](deployments/portaldot.json). This renews spending permission; the agent process still needs to be running to pay dues.
 
 The 12 receipts account for **2438.7171 tPOTv3** in fees including storage deposits, plus **0.1 tPOTv3** transferred to the agent. The recorded owner balance after setup was **61.0829 tPOTv3**. The earlier funding blocker is resolved; see the [deployment guide](docs/DEPLOY.md) for the measurements and current usage instructions. Mock mUSD has unrestricted minting and no monetary backing.
 

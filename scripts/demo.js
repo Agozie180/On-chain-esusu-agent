@@ -36,7 +36,7 @@ async function main() {
   h("Owner funds an agent vault (mUSD) and sets limits: 10/payment, 20/day, this circle only");
   const vault = await (await ethers.getContractFactory("AgentAllowance")).deploy(owner.address, await tok.getAddress());
   const vaddr = await vault.getAddress();
-  await vault.connect(owner).setPolicy(agent.address, dues, dues * 2n, 86400, (await time.latest()) + 14 * 86400);
+  await vault.connect(owner).setPolicy(agent.address, dues, dues * 2n, 86400, (await time.latest()) + 30 * 86400);
   await vault.connect(owner).setCircuit(addr, true);
   await tok.connect(owner).transfer(vaddr, dues * 5n);
 

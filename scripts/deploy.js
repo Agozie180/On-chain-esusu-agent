@@ -106,7 +106,7 @@ async function main() {
   }
   save();
   const vault = await deploy("AgentAllowance", "vault", "vaultDeploy", [owner.address, tokenAddr]);
-  if (!out.expiry) { out.expiry = (await ethers.provider.getBlock("latest")).timestamp + 14 * 86400; save(); }
+  if (!out.expiry) { out.expiry = (await ethers.provider.getBlock("latest")).timestamp + 30 * 86400; save(); }
   await send("setPolicy", () => vault.setPolicy(agentAddr, dues, dues * 3n, 86400, out.expiry));
   await send("allowCircle", () => vault.setCircuit(out.circle, true));
   await send("allowServicePayee", () => vault.setPayee(servicePayee, true, dues * 3n));

@@ -25,7 +25,8 @@
     "fundVault": "0x3d950bfee5bcd1256f9d6bbe99a5360894efec6cb5b38f32e598acb0d268ebde",
     "approveCollateral": "0x81116d4e345f884c2d7f8c6aa4f90b01b0b63d9fc2b8c8d0d94c464eb2becb5e",
     "ownerJoin": "0x5b6b3dba77ec0c21939fcfc88384756fc48f60bb1ca8f836b8a95ba441de2d1d",
-    "fundAgent": "0x1465e8ad254d73b92f0174dd88f5c435e2e14ca668b9faefdd2cab5a76dd050d"
+    "fundAgent": "0x1465e8ad254d73b92f0174dd88f5c435e2e14ca668b9faefdd2cab5a76dd050d",
+    "extendPolicy": "0xb4c9cc7d34bd5fbdaa09255b0094613ddccedca0d8715210e599b8aafaa9b71b"
   },
   "receipts": {
     "registryDeploy": {
@@ -87,6 +88,11 @@
       "blockNumber": 179994,
       "gasUsed": "3519763079325",
       "gasPrice": "31880"
+    },
+    "extendPolicy": {
+      "blockNumber": 279265,
+      "gasUsed": "1142311419832",
+      "gasPrice": "24875"
     }
   },
   "status": "verified",
@@ -96,7 +102,7 @@
   "circleIndex": 0,
   "circle": "0xeba280DD133D38852b7b58e4ECf4B29BCFaDBd1d",
   "vault": "0x98017f2275B6758791687e0916cFc4933351482E",
-  "expiry": 1794087006,
+  "expiry": 1796139438,
   "servicePayee": "0x9a639DD63959F4DAd2B959d0564917ea64AeA446",
   "codeHashes": {
     "registry": "0xcc55c7ee00e175ca8ac2efa6f9929ac51a4158375833740089eac9fa91530db2",
@@ -123,5 +129,17 @@
     "circleAllowed": true,
     "servicePayeeAllowed": true,
     "receiptFees": "2438.7170914772332804"
+  },
+  "policyRenewal": {
+    "verifiedAt": "2026-11-01T15:37:25.365Z",
+    "previousExpiry": 1794087006,
+    "expiry": 1796139438,
+    "days": 30,
+    "agent": "0xe544d4F8D6269D8851B6bEaA86702d81537469d7",
+    "perTxCap": "10000000",
+    "periodCap": "30000000",
+    "periodLength": "86400",
+    "transaction": "0xb4c9cc7d34bd5fbdaa09255b0094613ddccedca0d8715210e599b8aafaa9b71b",
+    "blockNumber": 279265
   }
 }

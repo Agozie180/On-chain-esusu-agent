@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#183e34">
-<meta name="description" content="Save together with Esusu. Explore rotating savings circles on Portaldot, choose your payout slot, and manage your agent's spending limits.">
-<title>Esusu — Savings, in good company</title>
+<meta name="description" content="For Nigerian ajo groups and cooperatives: save together, take turns receiving the pot, and let an agent pay your dues within limits you control.">
+<title>Esusu — Ajo savings with automated dues</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -42,7 +42,7 @@
 <div class="workspace">
 <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span class="breadcrumb-slash">/</span><strong>Overview</strong></div><div class="topbar-actions"><span class="testnet-label">Testnet funds only</span><button id="btnConnect" class="primary wallet-button">Connect wallet</button></div></header>
 <main id="main" class="content">
-<section class="hero" id="overview" aria-labelledby="heroTitle"><div class="hero-copy"><p class="eyebrow"><span class="tiny-line"></span>A TRADITION OF SAVING. A NEW WAY FORWARD.</p><h1 id="heroTitle">A shared pot.<br><span>A clear plan.</span></h1><p class="hero-lead">Join a savings circle, choose your payout slot, and contribute each round. The rules stay visible. You stay in control.</p><a class="text-link hero-link" href="#discover">Find your circle <svg><use href="#i-arrow"/></svg></a></div>
+<section class="hero" id="overview" aria-labelledby="heroTitle"><div class="hero-copy"><p class="eyebrow"><span class="tiny-line"></span>FOR NIGERIAN AJO GROUPS &amp; COOPERATIVES</p><h1 id="heroTitle">Save together.<br><span>Automate dues.</span></h1><p class="hero-lead">Pool savings, choose your payout slot, and take turns receiving the pot. Your agent pays your dues within limits you set.</p><a class="text-link hero-link" href="#discover">Explore the testnet circle <svg><use href="#i-arrow"/></svg></a></div>
 <div class="circle-story"><svg class="circle-drawing" viewBox="0 0 350 270" role="img" aria-labelledby="cycleTitle cycleDesc"><title id="cycleTitle">Everyone contributes. Everyone takes a turn.</title><desc id="cycleDesc">An illustration of three members contributing to a shared savings pot in turn.</desc>
 <circle cx="175" cy="133" r="94" fill="none" stroke="#d5dbd0" stroke-width="1" stroke-dasharray="3 5"/><circle cx="175" cy="133" r="73" fill="none" stroke="#b4c0ad" stroke-width="1"/>
 <path d="M194 42a94 94 0 0 1 75 90m-5-8 5 8 5-8M252 188a94 94 0 0 1-132 21m10 0-10 0 3 10M87 166a94 94 0 0 1 58-122m-7 8 7-8-10-3" fill="none" stroke="#54705c" stroke-width="1.5"/>
@@ -83,7 +83,7 @@
 <div id="vaultView" style="display:none"><div class="kv detail-stats" id="vaultKv"></div>
 <div class="funding-grid"><div class="row"><div class="grow"><label for="fundAmt">Add funds</label><input id="fundAmt" value="50" inputmode="decimal"></div><button id="btnFund">Fund</button></div><div class="row"><div class="grow"><label for="wdAmt">Withdraw to your wallet</label><input id="wdAmt" value="10" inputmode="decimal"></div><button id="btnVaultWd">Withdraw</button></div></div>
 <div class="subsection-heading"><h3>Spending policy</h3><span class="small">You set every limit.</span></div>
-<div class="grid"><div class="field-wide"><label for="pAgent">Agent wallet address</label><input id="pAgent" placeholder="0x…" spellcheck="false" autocomplete="off"></div><div><label for="pPerTx">Maximum per payment</label><input id="pPerTx" value="10" inputmode="decimal"></div><div><label for="pPeriodCap">Maximum per period</label><input id="pPeriodCap" value="30" inputmode="decimal"></div><div><label for="pHours">Period <span class="optional">hours</span></label><input id="pHours" value="24" inputmode="decimal"></div><div><label for="pDays">Expires in <span class="optional">days</span></label><input id="pDays" value="14" inputmode="decimal"></div></div>
+<div class="grid"><div class="field-wide"><label for="pAgent">Agent wallet address</label><input id="pAgent" placeholder="0x…" spellcheck="false" autocomplete="off"></div><div><label for="pPerTx">Maximum per payment</label><input id="pPerTx" value="10" inputmode="decimal"></div><div><label for="pPeriodCap">Maximum per period</label><input id="pPeriodCap" value="30" inputmode="decimal"></div><div><label for="pHours">Period <span class="optional">hours</span></label><input id="pHours" value="24" inputmode="decimal"></div><div><label for="pDays">Expires in <span class="optional">days</span></label><input id="pDays" value="30" inputmode="decimal"></div></div>
 <div class="row"><button id="btnPolicy" class="primary">Save policy</button><button id="btnAllow">Allow this circle</button><button id="btnDisallow">Remove this circle</button></div>
 <div class="pause-controls"><div><strong>You can always press pause.</strong><p>Stop agent payments without moving your funds.</p></div><div class="row"><button id="btnPause" class="danger">Pause agent</button><button id="btnUnpause">Resume agent</button></div></div>
 <div class="subsection-heading"><h3>Approved service providers</h3></div><p class="sub">Allow specific APIs or data services. Provider limits also count towards your agent’s total allowance.</p>
