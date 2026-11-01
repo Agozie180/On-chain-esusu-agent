@@ -5,7 +5,9 @@
 
 Members choose a payout slot and lock collateral; earlier payouts require more collateral to cover remaining dues. The agent automates contributions from a funded vault with owner-set limits. This addresses missed payments and members who stop contributing after their payout. It is a testnet prototype, with no recruited pilot users yet.
 
-**Start here:** [open the live app](https://onchainesusuagent.vercel.app). No wallet is needed to inspect the circle, payout slots or risk grade. Use Path A below for a complete hands-on agent demo with local test accounts.
+**Start here:** [watch automatic payments and payouts](https://onchainesusuagent.vercel.app/#demoSection). Press **Watch demo** for a roughly 45-second replay of real transactions from a local blockchain. The actual agent paid the owner's three dues payments and settled all three rounds; demo wallets claimed payouts and returned collateral. Receipts are downloadable. No wallet, faucet or background process is needed to watch. The recording is explicitly local, not a live Portaldot run.
+
+To execute it yourself, run `npm install` then `npm run demo:record`. To inspect the deployed Portaldot circle, use the workspace below the recording. For hands-on wallet interaction, use Path A.
 
 ## Path A: local hands-on demo (Node 22)
 
@@ -28,8 +30,8 @@ To act, the demo prints a public dev key and the MetaMask network values. Then:
 
 ## Path B: prove correctness
 ```bash
-npm test          # 110 tests: circles, vault, registry, agent on a local chain, 402 service, 40 random circles
-npm run e2e       # 51 headless browser checks (needs Chromium; CI installs it)
+npm test          # 113 tests: circles, vault, registry, agent on a local chain, 402 service, 40 random circles
+npm run e2e       # 56 headless browser checks (needs Chromium; CI installs it)
 ```
 Try to break it: the self-audit lists what we found ([AUDIT](AUDIT.md)); the fuzz test asserts solvency and debtor-safety after every transaction and was mutation-checked (it fails when we sabotage the contract).
 
@@ -46,7 +48,7 @@ Open [the live app](https://onchainesusuagent.vercel.app), or run `npm run web` 
 
 | Criterion | Evidence | How to verify |
 |---|---|---|
-| **Technical feasibility (30%)** | 3 protocol contracts, agent, dapp, paid API; 110 contract/agent/service tests + 51 browser checks; randomized solvency/debtor-safety invariants; 12 finalized testnet deployment/setup transactions | Paths A, B and C; `git log` |
+| **Technical feasibility (30%)** | 3 protocol contracts, agent, dapp, paid API; 113 contract/agent/service tests + 56 browser checks; randomized solvency/debtor-safety invariants; 12 finalized testnet deployment/setup transactions | Paths A, B and C; `git log` |
 | **Innovation (30%)** | Slot-priced collateral that makes early payout safe; portable on-chain reputation with a Sybil guard; an AI agent bounded by owner-set on-chain limits that also **pays for APIs over HTTP 402** | `AgentAllowance.sol`, `agent/service.js`, `npm run demo:buy` |
 | **Ecosystem contribution (20%)** | Verified `0x` → `5…` address helper; tested deployment guide including storage costs; reusable reputation registry; MIT-licensed source (repository currently private) | [`lib/portaldot.js`](../lib/portaldot.js), [DEPLOY.md](DEPLOY.md) |
 | **Business potential (20%)** | Clear user (Nigerian savings circles), 0.5% fee capped at 2%, paid risk API, B2B for cooperatives; costed roadmap; sourced market facts | [BUSINESS.md](BUSINESS.md), [GRANTS.md](GRANTS.md), [ROADMAP.md](../ROADMAP.md) |

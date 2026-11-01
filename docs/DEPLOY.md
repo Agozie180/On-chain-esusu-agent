@@ -10,6 +10,14 @@ At the October 24 verification snapshot, the circle was Open with one of three m
 
 To renew again, run `npm run policy:extend` from the owner checkout with `PRIVATE_KEY` configured locally. It sets expiry to 30 days from the latest chain timestamp, retains the agent and caps, and records the receipt in `deployments/portaldot.json`. `setPolicy` also resets the spending period and its spent counter. This command submits a testnet transaction and does not start the agent process.
 
+### November 1 demo preparation and no-faucet fallback
+
+The testnet circle still has 1/3 members. Two dedicated demo wallets were generated locally, received test-gas funding and mock mUSD, and approved collateral/contributions; [the preparation checkpoint](../deployments/portaldot-demo.json) records those transactions. Keys are in the git-ignored `.testnet-demo-wallets.json`. Additional faucet tokens were unavailable, so the remaining joins and full testnet cycle have not been executed. Do not delete these keys if resuming later.
+
+`npm run demo:testnet -- --check` is read-only. `--run` resumes submitted transactions and performs the cycle, preserving existing vault policy; only use it after funding the entire run and reviewing its fee budget. The current script caps cumulative fees at 55 tPOTv3 and stops if more are needed. Do not run a second agent on the same circle during a demo run. There is no need to redeploy contracts.
+
+The hosted **Watch demo** section instead replays `web/demo-recording.json`, produced by `npm run demo:record` on a fresh local Hardhat chain. This uses the actual contracts and agent loop, requires no faucet and clearly labels every stage as local. It demonstrates nine contributions, three agent payments, three settlements, and all wallet claims without claiming testnet execution.
+
 The wallet/deployment steps below are for operators. The committed checkpoint belongs to this deployment and its owner: rerunning the script with the same keys/configuration reuses its transactions. For a separate stack, use a separately named Hardhat network and deployment record, preserving this evidence; do not overwrite the checkpoint with an unrelated wallet or local deployment.
 
 ## Network values

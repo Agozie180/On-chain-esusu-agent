@@ -65,6 +65,12 @@ async function main() {
       assert.match(context.window.ESUSU[name].bytecode, /^0x[0-9a-fA-F]+$/, `${name}: missing bytecode`);
     }
     assert.equal(typeof context.window.POLICY.assessCircle, "function");
+    const recording = JSON.parse(await get("demo-recording.json", 200));
+    assert.equal(recording.environment, "local");
+    assert.equal(recording.chainId, 31337);
+    assert.equal(recording.status, "completed");
+    assert.equal(recording.transactions.filter((r) => r.kind === "agent-payment" && r.receipt.status === 1).length, 3);
+    assert.equal(recording.finalState.circleBalance, "0");
     await get("/package.json", 404);
     await get("/agent/agent.js", 404);
     console.log("Static deployment smoke test passed.");

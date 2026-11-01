@@ -4,6 +4,8 @@ Record at 1080p and keep under 3:00. The stack is deployed on Portaldot V3 testn
 
 ## Rehearsal setup
 
+- **No faucet / instant judge playback:** open https://onchainesusuagent.vercel.app/#demoSection and press **Watch demo**. This replays the actual completed local contract run, with receipts, automatic agent payments, settlement, payout claims and returned collateral. The persistent local-demo label must remain visible. To regenerate the recording, run `npm run demo:record`.
+
 - **Complete local flow:** run `npm run demo:local`, then open http://127.0.0.1:5173. Use the full local agent configuration printed by the demo, and set `CIRCUITS` to its `liveCircle` from `.local-demo.json`; this overrides any existing testnet value in `.env`. `npm run demo:buy` uses the local paid API. The agent loops until stopped with Ctrl+C.
 - **Testnet capture:** stop the local web server, run `npm run web`, and use the committed Portaldot configuration. Fill the remaining two slots with separate wallets, supply their mock-token collateral/dues and estimate gas for every participant and the agent. The agent's recorded 0.1 tPOTv3 is not proof that an action is affordable. The policy was renewed November 1 and expires December 1, 2026 at 15:37:18 UTC. Setup and 12 finalized transactions are verified, plus the policy renewal receipt; a full live cycle/API demonstration still requires rehearsal. See [DEPLOY.md](DEPLOY.md).
 
@@ -17,4 +19,4 @@ If combining testnet deployment proof with the local end-to-end rehearsal, annou
 4. **1:15 Agent (45s):** start the agent with the selected environment's explicit configuration; show dues paid from the capped vault and a rejected withdrawal attempt.
 5. **2:00 Paid API (30s):** in the local rehearsal, run `npm run demo:buy`; the agent pays over HTTP 402 and receives a risk report. A testnet API requires its own running service and verified funding first.
 6. **2:30 Kill switch (15s):** press it, rerun the agent, it only alerts.
-7. **2:45 Close (15s):** 110 tests, 45 browser checks, 12 finalized deployment/setup transactions, remaining pilot work and the repo link. Public repo access and Pages hosting still need configuration.
+7. **2:45 Close (15s):** 113 tests, 56 browser checks, 12 finalized deployment/setup transactions, remaining pilot work and the repo link. The app and local replay are hosted on Vercel; private repository access is separate.

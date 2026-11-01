@@ -51,7 +51,8 @@ async function discover({ provider, registryAddr, ownerAddr }) {
   return found;
 }
 
-async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits = [], registryAddr, lead, state = {}, onEvent = () => {} }) {
+async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits = [], registryAddr, lead, state = {}, onEvent = () => {},
+  execute = async (contract, method, args) => (await (await contract[method](...args)).wait()).hash }) {
   if (registryAddr) circuits = [...new Set([...circuits, ...(await discover({ provider, registryAddr, ownerAddr }))])];
   const vault = new ethers.Contract(vaultAddr, VAULT_ABI, wallet);
   const [vaultToken, paused, expiry] = await Promise.all([vault.token(), vault.paused(), vault.expiry()]);
@@ -74,8 +75,8 @@ async function tick({ provider, wallet, vaultAddr, ownerAddr, circuits = [], reg
     const record = { ts: new Date().toISOString(), circuit: addr, round: Number(round), ...d };
 
     try {
-      if (d.action === "pay") record.tx = (await (await vault.payDues(addr)).wait()).hash;
-      if (d.action === "settle") record.tx = (await (await circle.settleRound()).wait()).hash;
+      if (d.action === "pay") record.tx = await execute(vault, "payDues", [addr], record);
+      if (d.action === "settle") record.tx = await execute(circle, "settleRound", [], record);
     } catch (e) {
       record.error = e.revert?.name || e.shortMessage || e.message; // the chain refusing is the system working
     }

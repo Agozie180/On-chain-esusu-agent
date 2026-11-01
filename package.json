@@ -22,6 +22,8 @@
     "flatten": "node scripts/flatten.js",
     "service": "node agent/service.js",
     "demo:local": "node scripts/local-demo.js",
+    "demo:testnet": "node scripts/testnet-demo.js",
+    "demo:record": "hardhat run scripts/record-demo.js",
     "demo:buy": "node scripts/buy-report.js",
     "publish:config": "node scripts/publish-config.js",
     "policy:extend": "node scripts/extend-policy.js"

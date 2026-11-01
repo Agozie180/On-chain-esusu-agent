@@ -2,15 +2,16 @@
 
 **For Nigerian ajo groups and cooperatives: save together, take turns receiving the pot, and let an agent pay your dues within limits you control.**
 
-[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-110%20contract%20%2B%2051%20browser-1f6b4a)
+[![CI](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Agozie180/On-chain-esusu-agent/actions/workflows/ci.yml) ![License](https://img.shields.io/badge/license-MIT-green) ![Network](https://img.shields.io/badge/Portaldot%20V3-EVM-1f6b4a) ![Tests](https://img.shields.io/badge/tests-113%20contract%20%2B%2056%20browser-1f6b4a)
 
 Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deployed and verified on Portaldot V3 testnet**, with 12 finalized deployment and setup transactions (see [Status](#status-read-this-first)).
 
 | Try it | How |
 |---|---|
 | **Live app** | [Open the dapp on Vercel](https://onchainesusuagent.vercel.app) or run `npm run web` locally (see [docs/DEPLOY.md](docs/DEPLOY.md)). |
+| **Watch automatic payments and payouts—no wallet or faucet** | [Watch the recorded local contract demo](https://onchainesusuagent.vercel.app/#demoSection). About 45 seconds, with downloadable transaction receipts. |
 | **60-second local demo, no wallet or tokens needed** | `npm install && npm run demo:local`, then open http://127.0.0.1:5173 ([judge guide](docs/JUDGES.md)) |
-| **Prove it works** | `npm test` (110 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
+| **Prove it works** | `npm test` (113 tests incl. 40 randomized circles) · `npm run e2e` (real browser) |
 
 ![Esusu desktop workspace, rendered against a local test chain](docs/dapp-desktop.png)
 
@@ -24,14 +25,22 @@ Built for the **Portaldot Hacker House 2026** (Ecosystem DApps). **Status: deplo
 
 Earlier payout slots require more collateral to cover the member's remaining dues. The agent can only pay approved circles and providers; it cannot withdraw from the vault. Late-slot defaults can still reduce later pots, so this is not a guarantee against every loss. [How the safeguards work](docs/AUDIT.md).
 
+## Watch a complete cycle without testnet gas
+
+The hosted app includes an explicitly labelled **recording of real local contract transactions**: three members make nine contributions, the actual agent pays the owner's three contributions and settles all three rounds, and the demo wallets claim every payout and collateral refund. Each 30 mUSD pot pays 29.85 mUSD to its recipient plus a 0.15 mUSD protocol fee. The circle ends with zero funds. Member 1 also owns the treasury, so that wallet receives the fees.
+
+This is a replay, not a live Portaldot run. It works without a wallet, faucet or background agent service. Reproduce it using `npm install` then `npm run demo:record`; the command uses a fresh local Hardhat chain, the same Solidity contracts and the real agent decision loop, and saves the receipts to `web/demo-recording.json`.
+
+The November 1 testnet preparation created two local demo wallets, minted their test mUSD and approved their contributions. The circle remains open with 1/3 members: both remaining joins estimate about 31.24 tPOTv3 combined, before contributions and settlement. Further testnet spending is deferred because more faucet tokens are unavailable. [Preparation receipts](deployments/portaldot-demo.json) are separate from the local recording; the private demo keys remain git-ignored.
+
 ## Status (read this first)
 
 | Piece | State |
 |---|---|
-| 3 contracts (`EsusuCircle`, `EsusuRegistry`, `AgentAllowance`) | Built. 110 tests incl. 40 randomized full circles checking solvency after every transaction. Unaudited. |
+| 3 contracts (`EsusuCircle`, `EsusuRegistry`, `AgentAllowance`) | Built. 113 tests incl. 40 randomized full circles checking solvency after every transaction. Unaudited. |
 | Agent (decision core, auto-discovery, Telegram alerts, risk grader) | Built and tested against a real local chain. |
 | Paid API: agent buys a risk report over HTTP 402 from its capped vault | Built and tested end to end (local). |
-| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 51 checks pass in headless Chromium against a local chain. |
+| Dapp (read-only mode, slot picker, risk grade, stablecoin flows, vault controls) | Built. 56 checks pass in headless Chromium against a local chain. |
 | One-command judge demo with seeded circles, a defaulter, a gated circle and a live agent | Built and run end to end on a local chain. |
 | **Portaldot testnet deployment** | **Deployed and verified October 24.** Registry, demo mUSD, circle and agent vault have contract code on chain 420420777. All 12 deployment/setup transactions are finalized. See [deployment evidence](deployments/portaldot.json). |
 | Portaldot **WASM / ink!** | **Not used.** Shown honestly as roadmap, not claimed. |
@@ -102,10 +111,10 @@ flowchart LR
 
 | Claim | Result | Command |
 |---|---|---|
-| Contracts + agent + service tests | 110 passing (70 + 40 random circles) | `npm test` |
+| Contracts + agent + service tests | 113 passing (73 + 40 random circles) | `npm test` |
 | Random circles (2 to 8 members, native or ERC-20, random fees, defaults, vanishing members): solvency and debtor-safety asserted after every transaction, no stuck funds | 40 passing (`FUZZ_RUNS=500 npm run test:fuzz` for more) | `npm run test:fuzz` |
 | The fuzz suite can fail: breaking collateral pricing fails 31/40, breaking slashing fails 38/40 | Mutation-checked by hand | edit `collateralFor` or the `pot[r] += cut` line |
-| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist, metadata escaping, wrong-network guard | 51 checks | `npm run e2e` |
+| Real-browser end to end: create / join / pay / settle / withdraw, vault and kill switch, ERC-20 approvals, read-only mode, provider allowlist, metadata escaping, wrong-network guard | 56 checks | `npm run e2e` |
 | Settlement gas grows linearly: about 0.45M at 12 members, 0.78M at 24 (hence the 30-member cap) | measured | see [AUDIT](docs/AUDIT.md) |
 
 ## Docs

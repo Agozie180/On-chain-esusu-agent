@@ -42,7 +42,7 @@
 <div class="workspace">
 <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span class="breadcrumb-slash">/</span><strong>Overview</strong></div><div class="topbar-actions"><span class="testnet-label">Testnet funds only</span><button id="btnConnect" class="primary wallet-button">Connect wallet</button></div></header>
 <main id="main" class="content">
-<section class="hero" id="overview" aria-labelledby="heroTitle"><div class="hero-copy"><p class="eyebrow"><span class="tiny-line"></span>FOR NIGERIAN AJO GROUPS &amp; COOPERATIVES</p><h1 id="heroTitle">Save together.<br><span>Automate dues.</span></h1><p class="hero-lead">Pool savings, choose your payout slot, and take turns receiving the pot. Your agent pays your dues within limits you set.</p><a class="text-link hero-link" href="#discover">Explore the testnet circle <svg><use href="#i-arrow"/></svg></a></div>
+<section class="hero" id="overview" aria-labelledby="heroTitle"><div class="hero-copy"><p class="eyebrow"><span class="tiny-line"></span>FOR NIGERIAN AJO GROUPS &amp; COOPERATIVES</p><h1 id="heroTitle">Save together.<br><span>Automate dues.</span></h1><p class="hero-lead">Pool savings, choose your payout slot, and take turns receiving the pot. Your agent pays your dues within limits you set.</p><div class="hero-actions"><a class="text-link hero-link" href="#demoSection">Watch automatic payments <svg><use href="#i-arrow"/></svg></a><a class="text-link" href="#discover">Explore the testnet circle ↗</a></div></div>
 <div class="circle-story"><svg class="circle-drawing" viewBox="0 0 350 270" role="img" aria-labelledby="cycleTitle cycleDesc"><title id="cycleTitle">Everyone contributes. Everyone takes a turn.</title><desc id="cycleDesc">An illustration of three members contributing to a shared savings pot in turn.</desc>
 <circle cx="175" cy="133" r="94" fill="none" stroke="#d5dbd0" stroke-width="1" stroke-dasharray="3 5"/><circle cx="175" cy="133" r="73" fill="none" stroke="#b4c0ad" stroke-width="1"/>
 <path d="M194 42a94 94 0 0 1 75 90m-5-8 5 8 5-8M252 188a94 94 0 0 1-132 21m10 0-10 0 3 10M87 166a94 94 0 0 1 58-122m-7 8 7-8-10-3" fill="none" stroke="#54705c" stroke-width="1.5"/>
@@ -52,6 +52,20 @@
 </svg></div></section>
 <div class="mode-strip"><span id="modeBanner">Explore in read-only mode. Connect a wallet when you’re ready to take part.</span><span id="syncStatus" class="sync-status" role="status">Connecting to the network</span></div>
 <div class="overview-stats kv" id="regKv" aria-label="Registry overview"><div><b>Circles</b><span>—</span></div><div><b>Protocol fee</b><span>—</span></div><div><b>My reputation</b><span class="stat-prompt">connect wallet</span></div><div><b>My history</b><span>—</span></div></div>
+<section class="demo-section" id="demoSection" aria-labelledby="demoHeading">
+<div class="section-heading"><div><p class="eyebrow">WATCH A COMPLETE SAVINGS CIRCLE</p><h2 id="demoHeading">The agent pays. Everyone takes a turn.</h2></div><span class="demo-label">Recorded local contract demo</span></div>
+<p class="section-intro">Three demo members contribute 10 mUSD each per round. The agent pays Member 1’s share within a 10 mUSD payment limit and 30 mUSD daily limit. Watch all three rounds and the payouts arriving in their wallets.</p>
+<div class="demo-player">
+<div class="demo-members" id="demoMembers"><div><span>Member 1 · agent assisted</span><strong>0 mUSD received</strong></div><div><span>Member 2</span><strong>0 mUSD received</strong></div><div><span>Member 3</span><strong>0 mUSD received</strong></div></div>
+<div class="demo-moment"><span class="small" id="demoStep">Loading the recording…</span><h3 id="demoEvent" aria-live="polite">A full cycle, from contributions to payouts.</h3><p id="demoDetail">Real contract transactions recorded on a local blockchain, using the same Solidity contracts and agent code. This replay uses free demo funds and needs no wallet.</p></div>
+<div class="demo-counters"><span>Agent paid <b id="demoPaid">0 mUSD</b></span><span>Rounds settled <b id="demoRounds">0 / 3</b></span></div>
+<progress id="demoProgress" value="0" max="18" aria-label="Demo playback progress"></progress>
+<div class="demo-controls"><button id="btnWatchDemo" class="primary" disabled>Watch demo · about 45 seconds</button><button id="btnDemoNext" disabled>Next step</button><button id="btnDemoRestart" disabled>Start again</button><a class="text-link" href="demo-recording.json" download>Download transaction receipts ↗</a></div>
+<details class="demo-receipt"><summary>Receipt for this step</summary><code id="demoReceipt">Press Watch demo to begin.</code></details>
+</div>
+<p class="demo-disclosure">This is a replay of a completed <strong>local blockchain</strong> run, not a live Portaldot transaction. The Portaldot testnet circle is shown below. Payouts are claimed by the demo members’ wallets; the restricted agent never receives withdrawal access. <span id="demoRecordedAt"></span></p>
+<details class="demo-reproduce"><summary>Run the contracts and agent yourself—no faucet needed</summary><p>With Node 22 and this repository, run <code>npm install</code>, then <code>npm run demo:record</code>. It runs every payment and payout on a fresh local chain and saves the receipts. Use <code>npm run demo:local</code> for the interactive wallet workspace.</p></details>
+</section>
 <div class="workspace-grid"><div class="workspace-primary">
 <section class="panel" id="discover" aria-labelledby="circlesHeading">
 <div class="section-heading"><div><p class="eyebrow">MAKE YOUR NEXT MOVE</p><h2 id="circlesHeading">Find your circle<span class="heading-count" id="circleCount">—</span></h2></div><span class="section-index">01 /</span></div><p class="section-intro">A shared commitment, with the terms laid out first.</p>
@@ -102,5 +116,5 @@
 <footer><span class="footer-brand">esusu.</span><span>Built on Portaldot. Built around people.</span><div><a href="https://github.com/Agozie180/On-chain-esusu-agent" target="_blank" rel="noopener noreferrer">Source code ↗</a><a href="https://github.com/Agozie180/On-chain-esusu-agent/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">Security ↗</a></div></footer>
 </main></div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
-<script src="config.js"></script><script src="contracts.js"></script><script src="risk.js"></script><script src="app.js"></script>
+<script src="config.js"></script><script src="contracts.js"></script><script src="risk.js"></script><script src="app.js"></script><script src="demo.js"></script>
 </body></html>

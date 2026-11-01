@@ -7,4 +7,6 @@ cache/
 deployments/hardhat.json
 deployments/localhost.json
 .local-demo.json
+.testnet-demo-wallets.json
+.testnet-demo.lock
 .vercel/
