@@ -105,7 +105,7 @@ flowchart LR
 1. **A `0x…` → native `5…` address helper**, verified byte-for-byte against the official guide's example ([`lib/portaldot.js`](lib/portaldot.js)). Newcomers need this just to claim test tokens.
 2. **A deploy kit**: local wallet generator, RPC/balance preflight, gas overrides, Remix flatten fallback, and a step-by-step guide for the pitfalls other builders reported ([docs/DEPLOY.md](docs/DEPLOY.md)).
 3. **A reusable on-chain reputation registry** any Portaldot dapp can read with `scoreOf(address)`.
-4. **The bounded-agent vault pattern**, including locally demonstrated HTTP 402 payments from an AI agent, as MIT-licensed reference code (repository currently private).
+4. **The bounded-agent vault pattern**, including locally demonstrated HTTP 402 payments from an AI agent, as MIT-licensed reference code.
 
 ## Measured (all local, reproducible)
 
